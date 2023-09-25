@@ -4,7 +4,7 @@
 namespace jade {
 
 BasicBlock* Function::append() {
-    return m_bbs.append();
+    return m_bbs.append<BasicBlock>();
 }
 
 } // namespace jade

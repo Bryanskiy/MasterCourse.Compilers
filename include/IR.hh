@@ -22,6 +22,7 @@ public:
 
   Type(Tag tag) : m_tag(tag) {}
 
+  Tag getType() const { return m_tag; }
 private:
   Tag m_tag;
 };
@@ -30,6 +31,8 @@ class Value {
 public:
   Value(Type type) : m_type{type} {}
   Value() = default;
+
+  Type::Tag getType() const { return m_type.getType(); }
 protected:
   Type m_type{Type::None};
 };
@@ -55,9 +58,10 @@ public:
 
   template<typename T, typename ...Args>
   T* create(Args&&... args) {
-    auto elem = m_bb->m_instrs.insert(m_inserter, std::forward<Args>(args)...);
+    auto elem = m_bb->m_instrs.insert<T>(m_inserter, std::forward<Args>(args)...);
     // bump inserter
     m_inserter = elem;
+    return static_cast<T*>(elem);
   }
 private:
   BasicBlock* m_bb{nullptr};
@@ -65,8 +69,8 @@ private:
 };
 
 struct Instruction : public Value, public IListNode<Instruction> {
-  virtual void dump(std::ostream& stream);
-  virtual ~Instruction() = 0;
+  virtual void dump(std::ostream& stream) = 0;
+  virtual ~Instruction() = default;
 
   Instruction() = default;
   Instruction(Type type) : Value{type} {}
@@ -100,22 +104,32 @@ class BinaryInstr final : public Instruction {
 };
 
 // for simplification constant is an instruction yet:
-// v0: i32 = 1;
+// v1: i64 = const 1_64;
 template<class T>
 class Constant : public Instruction {};
 
-#define CONSTANT_SPECIALIZATION(type)                                \
-template <>                                                          \
-class Constant<type> : public Instruction {                          \
-public:                                                              \
-  Constant(type val) : Instruction{Type::I64}, m_val{val} {}         \
-private:                                                             \
-  type m_val;                                                        \
-}
+// TODO: how to map ctype and jade type in better way?
+#define CONSTANT_SPECIALIZATION(cty, jadety)                          \
+template <>                                                           \
+class Constant<cty> : public Instruction {                            \
+public:                                                               \
+  Constant(cty val) : Instruction{Type::jadety}, m_val{val} {}        \
+  ~Constant() override {};                                            \
+                                                                      \
+  void dump(std::ostream& stream) override {                          \
+                                                                      \
+  }                                                                   \
+                                                                      \
+  cty getValue() const { return m_val; }                              \
+private:                                                              \
+  cty m_val;                                                          \
+};                                                                    \
+                                                                      \
+using CONST_##jadety = Constant<cty>;
 
-CONSTANT_SPECIALIZATION(std::int64_t);
-CONSTANT_SPECIALIZATION(std::int32_t);
-CONSTANT_SPECIALIZATION(std::int16_t);
-CONSTANT_SPECIALIZATION(std::int8_t);
+CONSTANT_SPECIALIZATION(std::int64_t, I64);
+CONSTANT_SPECIALIZATION(std::int32_t, I32);
+CONSTANT_SPECIALIZATION(std::int16_t, I16);
+CONSTANT_SPECIALIZATION(std::int8_t, I8);
 
 } // namespace jade

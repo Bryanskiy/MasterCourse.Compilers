@@ -43,9 +43,9 @@ class IList {
 public:
 
     // T is a IListNode<T>
-    template<typename... Args>
+    template<typename U, typename... Args>
     T* insert(T* const inserter, Args&&... args) {
-        auto elem = std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+        auto elem = std::unique_ptr<T>(new U(std::forward<Args>(args)...));
 
         if (inserter == nullptr) {
             assert(m_start == nullptr);
@@ -70,8 +70,9 @@ public:
         return inserter->m_next.get();
     }
 
+    template<typename U>
     T* append() {
-        return insert(m_last);
+        return insert<U>(m_last);
     }
 
     T* begin() { return m_start.get(); }
