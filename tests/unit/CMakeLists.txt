@@ -5,5 +5,5 @@ set(TESTS
 )
 
 add_executable(tests ${TESTS})
-target_link_libraries(tests GTest::gtest GTest::gtest_main pthread)
+target_link_libraries(tests graph GTest::gtest GTest::gtest_main pthread)
 target_include_directories(tests PRIVATE ${PROJECT_SOURCE_DIR}/include/)
