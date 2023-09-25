@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "basicBlock.hh"
+#include "IR.hh"
 #include "ilist.hh"
 
 namespace jade {

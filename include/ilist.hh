@@ -19,6 +19,8 @@ class IList;
 //  +------+
 //  | data |
 //  +------+
+
+// TODO: make it iterator
 template<typename T>
 class IListNode {
 public:
@@ -71,6 +73,9 @@ public:
     T* append() {
         return insert(m_last);
     }
+
+    T* begin() { return m_start.get(); }
+    T* end() { return m_last; }
 
 private:
     std::unique_ptr<T> m_start{nullptr};
