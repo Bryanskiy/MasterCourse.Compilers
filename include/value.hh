@@ -26,7 +26,4 @@ class Value {
   Type m_type{Type::None};
 };
 
-struct IValue : public Value, public IListNode<Value> {};
-using Values = std::unique_ptr<IValue>;
-
 } // namespace jade

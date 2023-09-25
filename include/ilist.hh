@@ -1,12 +1,12 @@
 #pragma once
 
+#include <cassert>
 #include <memory>
 
 namespace jade {
 
 template<typename T>
 class IList;
-
 
 // intrusive list:
 //
@@ -22,32 +22,54 @@ class IList;
 template<typename T>
 class IListNode {
 public:
-    T* next() { return static_cast<T*>(m_next.get()); }
-    T* prev() { return static_cast<T*>(m_prev); }
+    T* next() { return m_next.get(); }
+    T* prev() { return m_prev; }
 protected:
-    friend class IList<T>;
 
     std::unique_ptr<T> m_next{nullptr};
     T* m_prev{nullptr};
+
+private:
+    friend class IList<T>;
+
+    // change owner
+    std::unique_ptr<T> next_unique() { return std::move(m_next); } // TODO: is it safe?
 };
 
 template<typename T>
 class IList {
 public:
-    // requires default T ctor
-    T* append() {
-        auto elem = std::make_unique<T>();
-        if (m_start == nullptr) {
+
+    // T is a IListNode<T>
+    template<typename... Args>
+    T* insert(T* const inserter, Args&&... args) {
+        auto elem = std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+
+        if (inserter == nullptr) {
+            assert(m_start == nullptr);
+
             m_last = elem.get();
             m_start = std::move(elem);
             return m_last;
         }
 
-        elem->m_prev = m_last;
-        m_last->m_next = std::move(elem);
-        auto tmp = m_last->m_next.get();
-        m_last = tmp;
-        return m_last;
+        auto next = std::move(inserter->next_unique());
+        elem->m_prev = inserter;
+        inserter->m_next = std::move(elem);
+
+        if (next == nullptr) {
+            assert(inserter == m_last);
+            m_last = inserter->m_next.get();
+        } else {
+            inserter->m_next->m_next = std::move(next);
+            next->m_prev = inserter->m_next.get();
+        }
+
+        return inserter->m_next.get();
+    }
+
+    T* append() {
+        return insert(m_last);
     }
 
 private:
