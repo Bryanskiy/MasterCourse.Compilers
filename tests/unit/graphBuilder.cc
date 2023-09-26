@@ -1,7 +1,8 @@
-#include "function.hh"
-#include "gtest/gtest.h"
 #include <cstddef>
 #include <cstdint>
+
+#include "gtest/gtest.h"
+#include "function.hh"
 
 using namespace jade;
 
@@ -102,18 +103,20 @@ TEST(GraphBuilder, Fib) {
         ASSERT_EQ(v2->getValue(), 2);
         ASSERT_EQ(v1->next(), v2);
         ASSERT_EQ(v2->prev(), v1);
+
+        ASSERT_EQ(v1->getParent(), bb0);
     }
 
     // bb1
     auto builder1 = InstrBulder{bb1};
     auto v3 = builder1.create<PhiInstr>(Type::create<Type::I32>());
     auto v4 = builder1.create<CmpInstr>(
-        CAST(Value*, v3),
-        CAST(Value*, v0),
+        static_cast<Value*>(v3),
+        static_cast<Value*>(v0),
         CmpInstr::Kind::LE
     );
     auto if_ = builder1.create<IfInstr>(
-        CAST(Value*, v4),
+        static_cast<Value*>(v4),
         bb2,
         bb3
     );
@@ -128,6 +131,8 @@ TEST(GraphBuilder, Fib) {
 
         ASSERT_EQ(v3->getType(), Type::I32);
         ASSERT_EQ(v4->getType(), Type::I1);
+
+        ASSERT_EQ(v3->getParent(), bb1);
     }
 
     // bb2
@@ -149,15 +154,15 @@ TEST(GraphBuilder, Fib) {
     auto v6 = builder3.create<PhiInstr>(Type::create<Type::I32>());
     auto c = builder3.create<CONST_I32>(1);
     auto v7 = builder3.create<BinaryOp>(
-        CAST(Value*, v6),
-        CAST(Value*, c),
+        static_cast<Value*>(v6),
+        static_cast<Value*>(c),
         BinaryOp::Kind::ADD
     );
     auto v8 = builder3.create<CastInstr>(v7, Type::I64);
     auto v9 = builder3.create<PhiInstr>(Type::create<Type::I64>());
     auto v10 = builder3.create<BinaryOp>(
-        CAST(Value*, v8),
-        CAST(Value*, v9),
+        static_cast<Value*>(v8),
+        static_cast<Value*>(v9),
         BinaryOp::Kind::MUL
     );
     builder3.create<GotoInstr>(bb1);
@@ -173,7 +178,7 @@ TEST(GraphBuilder, Fib) {
     }
 
     // PHI
-    // addOptions checks types
+    // addOption checks types
     v3->addOption(v2, bb0);
     v3->addOption(v7, bb3);
 
@@ -185,4 +190,47 @@ TEST(GraphBuilder, Fib) {
 
     v9->addOption(v1, bb0);
     v9->addOption(v10, bb3);
+
+    {
+        // check successors and preds.
+        auto checker = [](auto lhsBegin, auto lhsEnd, auto rhsBegin, auto rhsEnd) {
+            for(; lhsBegin < lhsEnd; ++lhsBegin) {
+                for(;rhsBegin < rhsEnd; ++rhsBegin) {
+                    ASSERT_EQ(*lhsBegin, *rhsBegin);
+                }
+            }
+        };
+
+        {
+            auto lhsPreds = std::array<BasicBlock*, 0>{};
+            checker(bb0->predsBegin(), bb0->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+
+            auto lhsSuccs = std::array<BasicBlock*, 1>{bb1};
+            checker(bb0->succsBegin(), bb0->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+        }
+
+        // {
+        //     auto lhsPreds = std::array<BasicBlock*, 2>{bb1, bb3};
+        //     checker(bb1->predsBegin(), bb1->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+
+        //     auto lhsSuccs = std::array<BasicBlock*, 2>{bb2, bb3};
+        //     checker(bb1->succsBegin(), bb1->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+        // }
+
+        {
+            auto lhsPreds = std::array<BasicBlock*, 1>{bb1};
+            checker(bb3->predsBegin(), bb3->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+
+            auto lhsSuccs = std::array<BasicBlock*, 1>{bb1};
+            checker(bb3->succsBegin(), bb3->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+        }
+
+        {
+            auto lhsPreds = std::array<BasicBlock*, 1>{bb1};
+            checker(bb2->predsBegin(), bb2->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+
+            auto lhsSuccs = std::array<BasicBlock*, 0>{};
+            checker(bb2->succsBegin(), bb2->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+        }
+    }
 }

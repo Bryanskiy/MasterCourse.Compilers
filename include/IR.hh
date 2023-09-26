@@ -49,10 +49,19 @@ class Instruction;
 
 class BasicBlock final : public IListNode<BasicBlock> {
 public:
+
+  auto predsBegin() { return m_preds.begin(); }
+  auto predsEnd() { return m_preds.end(); }
+
+  auto succsBegin() { return m_succs.begin(); }
+  auto succsEnd() { return m_succs.end(); }
+
 private:
   friend InstrBulder;
 
   IList<Instruction> m_instrs;
+  std::vector<BasicBlock*> m_preds;
+  std::vector<BasicBlock*> m_succs;
 };
 
 class InstrBulder final {
@@ -64,26 +73,25 @@ public:
   }
 
   template<typename T, typename ...Args>
-  T* create(Args&&... args) {
-    auto elem = m_bb->m_instrs.insert<T>(m_inserter, std::forward<Args>(args)...);
-    // bump inserter
-    m_inserter = elem;
-    return static_cast<T*>(elem);
-  }
+  T* create(Args&&... args);
+
 private:
   BasicBlock* m_bb{nullptr};
   Instruction* m_inserter{nullptr};
 };
 
-struct Instruction : public Value, public IListNode<Instruction> {
-  virtual void dump(std::ostream& stream) = 0;
-  virtual ~Instruction() = default;
-
+class Instruction : public Value, public IListNode<Instruction> {
+public:
   Instruction() = default;
   Instruction(Type type) : Value{type} {}
+  virtual ~Instruction() = default;
 
-private:
+  BasicBlock* getParent() { return m_bb; }
+  virtual void dump(std::ostream& stream) = 0;
+
   friend InstrBulder;
+private:
+  BasicBlock* m_bb{nullptr};
 };
 
 class IfInstr final : public Instruction {
@@ -100,6 +108,8 @@ public:
   BasicBlock* getTrueBB() { return m_true_bb; }
 
 private:
+  friend InstrBulder;
+
   Value* m_cond{nullptr};
   BasicBlock* m_false_bb{nullptr};
   BasicBlock* m_true_bb{nullptr};
@@ -113,6 +123,7 @@ public:
     // TODO
   }
 private:
+  friend InstrBulder;
   BasicBlock* m_bb{nullptr};
 };
 
@@ -241,6 +252,28 @@ CONSTANT_SPECIALIZATION(std::int32_t, I32);
 CONSTANT_SPECIALIZATION(std::int16_t, I16);
 CONSTANT_SPECIALIZATION(std::int8_t, I8);
 
+template<typename T, typename ...Args>
+T* InstrBulder::create(Args&&... args) {
+  auto inserted = m_bb->m_instrs.insert<T>(m_inserter, std::forward<Args>(args)...);
+  inserted->m_bb = m_bb;
 
-#define CAST(dstTy, src) static_cast<dstTy>(src)
+  auto elem = static_cast<T*>(inserted);
+  // bump inserter
+  m_inserter = elem;
+
+  auto linker = [](BasicBlock* lhs, BasicBlock* rhs) {
+    lhs->m_succs.push_back(rhs);
+    rhs->m_preds.push_back(lhs);
+  };
+
+  if constexpr (std::is_same_v<T, IfInstr>) {
+    linker(elem->m_true_bb, m_bb);
+    linker(elem->m_false_bb, m_bb);
+  } else if constexpr (std::is_same_v<T, GotoInstr>) {
+    linker(elem->m_bb, m_bb);
+  }
+
+  return elem;
+}
+
 } // namespace jade

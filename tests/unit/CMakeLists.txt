@@ -1,7 +1,7 @@
 find_package(GTest REQUIRED)
 
 set(TESTS
-    graph_builder.cc
+    graphBuilder.cc
 )
 
 add_executable(tests ${TESTS})
