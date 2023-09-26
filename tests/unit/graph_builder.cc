@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 
+using namespace jade;
+
 TEST(GraphBuilder, Check) {
     ASSERT_TRUE(true);
 }
@@ -29,7 +31,7 @@ TEST(GraphBuilder, Check) {
 //     }
 //
 //     bb1: {
-//         v3: i32 = phi [v2, bb0], [b7, bb3];
+//         v3: i32 = phi [v2, bb0], [v7, bb3];
 //         v4: i1 = v3 <= v0;
 //         if (v4, bb2, bb3);
 //     }
@@ -63,13 +65,10 @@ TEST(GraphBuilder, Check) {
 //   ---| bb3 |
 //      +-----+
 TEST(GraphBuilder, Fib) {
-    // TODO: type checking(types not valid now)
-    // TODO: fill and test phi nodes
-    // TODO: more tests
     // TODO: macros for convinient graph generation
 
-    auto function = jade::Function{};
-    auto v0 = function.appendParam(jade::Type::I32);
+    auto function = Function{};
+    auto v0 = function.appendParam(Type::I32);
 
     auto bb0 = function.appendBB();
     auto bb1 = function.appendBB();
@@ -91,14 +90,14 @@ TEST(GraphBuilder, Fib) {
     }
 
     // bb0
-    auto builder0 = jade::InstrBulder{bb0};
-    auto v1 = builder0.create<jade::CONST_I32>(1);
-    auto v2 = builder0.create<jade::CONST_I64>(2);
-    builder0.create<jade::GotoInstr>(bb1);
+    auto builder0 = InstrBulder{bb0};
+    auto v1 = builder0.create<CONST_I64>(1);
+    auto v2 = builder0.create<CONST_I32>(2);
+    builder0.create<GotoInstr>(bb1);
 
     {
-        ASSERT_EQ(v1->getType(), jade::Type::I32);
-        ASSERT_EQ(v2->getType(), jade::Type::I64);
+        ASSERT_EQ(v1->getType(), Type::I64);
+        ASSERT_EQ(v2->getType(), Type::I32);
         ASSERT_EQ(v1->getValue(), 1);
         ASSERT_EQ(v2->getValue(), 2);
         ASSERT_EQ(v1->next(), v2);
@@ -106,39 +105,84 @@ TEST(GraphBuilder, Fib) {
     }
 
     // bb1
-    auto builder1 = jade::InstrBulder{bb1};
-    auto v3 = builder1.create<jade::PhiInstr>();
-    auto v4 = builder1.create<jade::BinaryInstr>(
-        CAST(jade::Value*, v3),
-        CAST(jade::Value*, v0),
-        jade::BinaryInstr::Kind::LE
+    auto builder1 = InstrBulder{bb1};
+    auto v3 = builder1.create<PhiInstr>(Type::create<Type::I32>());
+    auto v4 = builder1.create<CmpInstr>(
+        CAST(Value*, v3),
+        CAST(Value*, v0),
+        CmpInstr::Kind::LE
     );
-    builder1.create<jade::IfInstr>(
-        CAST(jade::Value*, v4),
+    auto if_ = builder1.create<IfInstr>(
+        CAST(Value*, v4),
         bb2,
         bb3
     );
 
+    {
+        ASSERT_EQ(v3->prev(), nullptr);
+        ASSERT_EQ(v3->next(), v4);
+        ASSERT_EQ(v4->prev(), v3);
+        ASSERT_EQ(v4->next(), if_);
+        ASSERT_EQ(if_->prev(), v4);
+        ASSERT_EQ(if_->next(), nullptr);
+
+        ASSERT_EQ(v3->getType(), Type::I32);
+        ASSERT_EQ(v4->getType(), Type::I1);
+    }
+
     // bb2
-    auto builder2 = jade::InstrBulder{bb2};
-    auto v5 = builder2.create<jade::PhiInstr>();
-    builder2.create<jade::RetInstr>(v5);
+    auto builder2 = InstrBulder{bb2};
+    auto v5 = builder2.create<PhiInstr>(Type::create<Type::I64>());
+    auto ret = builder2.create<RetInstr>(v5);
+
+    {
+        ASSERT_EQ(v5->prev(), nullptr);
+        ASSERT_EQ(v5->next(), ret);
+        ASSERT_EQ(ret->prev(), v5);
+        ASSERT_EQ(ret->next(), nullptr);
+
+        ASSERT_EQ(v5->getType(), Type::I64);
+    }
 
     // bb3
-    auto builder3 = jade::InstrBulder{bb3};
-    auto v6 = builder3.create<jade::PhiInstr>();
-    auto c = builder3.create<jade::CONST_I32>(1);
-    auto v7 = builder3.create<jade::BinaryInstr>(
-        CAST(jade::Value*, v6),
-        CAST(jade::Value*, c),
-        jade::BinaryInstr::Kind::ADD
+    auto builder3 = InstrBulder{bb3};
+    auto v6 = builder3.create<PhiInstr>(Type::create<Type::I32>());
+    auto c = builder3.create<CONST_I32>(1);
+    auto v7 = builder3.create<BinaryOp>(
+        CAST(Value*, v6),
+        CAST(Value*, c),
+        BinaryOp::Kind::ADD
     );
-    auto v8 = builder3.create<jade::CastInstr>(v7, jade::Type::I64);
-    auto v9 = builder3.create<jade::PhiInstr>();
-    auto v10 = builder3.create<jade::BinaryInstr>(
-        CAST(jade::Value*, v8),
-        CAST(jade::Value*, v9),
-        jade::BinaryInstr::Kind::MUL
+    auto v8 = builder3.create<CastInstr>(v7, Type::I64);
+    auto v9 = builder3.create<PhiInstr>(Type::create<Type::I64>());
+    auto v10 = builder3.create<BinaryOp>(
+        CAST(Value*, v8),
+        CAST(Value*, v9),
+        BinaryOp::Kind::MUL
     );
-    builder3.create<jade::GotoInstr>(bb1);
+    builder3.create<GotoInstr>(bb1);
+
+    {
+        ASSERT_EQ(v6->getType(), Type::I32);
+        ASSERT_EQ(c->getType(), Type::I32);
+        ASSERT_EQ(c->getValue(), 1);
+        ASSERT_EQ(v6->getType(), Type::I32);
+        ASSERT_EQ(v8->getType(), Type::I64);
+        ASSERT_EQ(v9->getType(), Type::I64);
+        ASSERT_EQ(v10->getType(), Type::I64);
+    }
+
+    // PHI
+    // addOptions checks types
+    v3->addOption(v2, bb0);
+    v3->addOption(v7, bb3);
+
+    v5->addOption(v1, bb0);
+    v5->addOption(v10, bb3);
+
+    v6->addOption(v2, bb0);
+    v6->addOption(v7, bb3);
+
+    v9->addOption(v1, bb0);
+    v9->addOption(v10, bb3);
 }

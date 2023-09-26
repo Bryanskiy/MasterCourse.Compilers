@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cassert>
 #include <memory>
 #include <ostream>
 #include <vector>
@@ -22,6 +23,11 @@ public:
   };
 
   Type(Tag tag) : m_tag(tag) {}
+
+  template<Tag tag>
+  static Type create() {
+    return Type{tag};
+  }
 
   Tag getType() const { return m_tag; }
 private:
@@ -123,7 +129,10 @@ private:
 
 class PhiInstr final : public Instruction {
 public:
+  PhiInstr(Type type) : Instruction{type} {}
+
   void addOption(Instruction* instr, BasicBlock* bb) {
+    assert(getType() == instr->getType());
     m_instrs.push_back(instr);
     m_bbs.push_back(bb);
   }
@@ -136,7 +145,7 @@ private:
   std::vector<BasicBlock*> m_bbs;
 };
 
-class BinaryInstr final : public Instruction {
+class BinaryInstr : public Instruction {
 public:
   enum Kind {
     LE,
@@ -144,9 +153,43 @@ public:
     MUL,
   };
 
-  BinaryInstr(Value* lhs, Value* rhs, Kind kind) : m_kind(kind) {
+  BinaryInstr(Value* lhs, Value* rhs) {
+    assert(lhs->getType() == rhs->getType());
     m_inputs[0] = lhs;
     m_inputs[1] = rhs;
+  }
+
+private:
+  std::array<Value*, 2> m_inputs;
+};
+
+class CmpInstr final : public BinaryInstr {
+public:
+  enum Kind {
+    LE,
+  };
+
+  void dump(std::ostream& stream) override {
+    // TODO
+  }
+
+  CmpInstr(Value* lhs, Value* rhs, Kind kind) : BinaryInstr(lhs, rhs), m_kind(kind) {
+    m_type = Type::create<Type::I1>();
+  }
+
+private:
+  Kind m_kind;
+};
+
+class BinaryOp final : public BinaryInstr {
+public:
+  enum Kind {
+    ADD,
+    MUL,
+  };
+
+  BinaryOp(Value* lhs, Value* rhs, Kind kind) : BinaryInstr(lhs, rhs), m_kind(kind) {
+    m_type = lhs->getType();
   }
 
   void dump(std::ostream& stream) override {
@@ -154,18 +197,19 @@ public:
   }
 private:
   Kind m_kind;
-  std::array<Value*, 2> m_inputs;
 };
 
 class CastInstr final : public Instruction {
 public:
-  CastInstr(Value* val, Type type) : m_val{val}, m_type{type} {}
+  CastInstr(Value* val, Type type) : m_val{val}, m_cast{type} {
+    m_type = m_cast;
+  }
 
   void dump(std::ostream& stream) override {
     // TODO
   }
 private:
-  Type m_type;
+  Type m_cast;
   Value* m_val;
 };
 
