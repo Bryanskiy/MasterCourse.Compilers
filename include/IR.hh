@@ -267,10 +267,10 @@ T* InstrBulder::create(Args&&... args) {
   };
 
   if constexpr (std::is_same_v<T, IfInstr>) {
-    linker(elem->m_true_bb, m_bb);
-    linker(elem->m_false_bb, m_bb);
+    linker(m_bb, elem->m_true_bb);
+    linker(m_bb, elem->m_false_bb);
   } else if constexpr (std::is_same_v<T, GotoInstr>) {
-    linker(elem->m_bb, m_bb);
+    linker(m_bb, elem->m_bb);
   }
 
   return elem;

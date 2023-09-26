@@ -194,11 +194,11 @@ TEST(GraphBuilder, Fib) {
     {
         // check successors and preds.
         auto checker = [](auto lhsBegin, auto lhsEnd, auto rhsBegin, auto rhsEnd) {
-            for(; lhsBegin < lhsEnd; ++lhsBegin) {
-                for(;rhsBegin < rhsEnd; ++rhsBegin) {
-                    ASSERT_EQ(*lhsBegin, *rhsBegin);
-                }
+            for(; lhsBegin < lhsEnd; ++lhsBegin, ++rhsBegin) {
+                ASSERT_EQ(*lhsBegin, *rhsBegin);
             }
+
+            ASSERT_EQ(rhsBegin, rhsEnd);
         };
 
         {
@@ -209,13 +209,13 @@ TEST(GraphBuilder, Fib) {
             checker(bb0->succsBegin(), bb0->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
         }
 
-        // {
-        //     auto lhsPreds = std::array<BasicBlock*, 2>{bb1, bb3};
-        //     checker(bb1->predsBegin(), bb1->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+        {
+            auto lhsPreds = std::array<BasicBlock*, 2>{bb0, bb3};
+            checker(bb1->predsBegin(), bb1->predsEnd(), lhsPreds.begin(), lhsPreds.end());
 
-        //     auto lhsSuccs = std::array<BasicBlock*, 2>{bb2, bb3};
-        //     checker(bb1->succsBegin(), bb1->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
-        // }
+            auto lhsSuccs = std::array<BasicBlock*, 2>{bb3, bb2};
+            checker(bb1->succsBegin(), bb1->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+        }
 
         {
             auto lhsPreds = std::array<BasicBlock*, 1>{bb1};
