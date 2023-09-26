@@ -82,19 +82,19 @@ private:
 
 class IfInstr final : public Instruction {
 public:
-  IfInstr(Instruction* cond, BasicBlock* false_, BasicBlock* true_) :
+  IfInstr(Value* cond, BasicBlock* false_, BasicBlock* true_) :
     m_cond{cond}, m_false_bb{false_}, m_true_bb{true_} {}
 
   void dump(std::ostream& stream) override {
     // TODO
   }
 
-  Instruction* getCondition() { return m_cond; }
+  Value* getCondition() { return m_cond; }
   BasicBlock* getFalseBB() { return m_false_bb; }
   BasicBlock* getTrueBB() { return m_true_bb; }
 
 private:
-  Instruction* m_cond{nullptr};
+  Value* m_cond{nullptr};
   BasicBlock* m_false_bb{nullptr};
   BasicBlock* m_true_bb{nullptr};
 };
@@ -108,6 +108,17 @@ public:
   }
 private:
   BasicBlock* m_bb{nullptr};
+};
+
+class RetInstr final : public Instruction {
+public:
+  RetInstr(Value* v) : m_v{v} {}
+
+  void dump(std::ostream& stream) override {
+    // TODO
+  }
+private:
+  Value* m_v;
 };
 
 class PhiInstr final : public Instruction {
@@ -129,9 +140,11 @@ class BinaryInstr final : public Instruction {
 public:
   enum Kind {
     LE,
+    ADD,
+    MUL,
   };
 
-  BinaryInstr(Instruction* lhs, Instruction* rhs, Kind kind) : m_kind(kind) {
+  BinaryInstr(Value* lhs, Value* rhs, Kind kind) : m_kind(kind) {
     m_inputs[0] = lhs;
     m_inputs[1] = rhs;
   }
@@ -141,7 +154,19 @@ public:
   }
 private:
   Kind m_kind;
-  std::array<Instruction*, 2> m_inputs;
+  std::array<Value*, 2> m_inputs;
+};
+
+class CastInstr final : public Instruction {
+public:
+  CastInstr(Value* val, Type type) : m_val{val}, m_type{type} {}
+
+  void dump(std::ostream& stream) override {
+    // TODO
+  }
+private:
+  Type m_type;
+  Value* m_val;
 };
 
 // for simplification constant is an instruction yet:
@@ -173,5 +198,5 @@ CONSTANT_SPECIALIZATION(std::int16_t, I16);
 CONSTANT_SPECIALIZATION(std::int8_t, I8);
 
 
-#define CAST(src, dstTy) static_cast<dstTy>(src)
+#define CAST(dstTy, src) static_cast<dstTy>(src)
 } // namespace jade

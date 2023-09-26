@@ -19,7 +19,7 @@ TEST(GraphBuilder, Check) {
 // }
 //
 // Jade IR:
-
+//
 //
 // fn fact(v0: i32) -> i64 {
 //     bb0: {
@@ -63,6 +63,11 @@ TEST(GraphBuilder, Check) {
 //   ---| bb3 |
 //      +-----+
 TEST(GraphBuilder, Fib) {
+    // TODO: type checking(types not valid now)
+    // TODO: fill and test phi nodes
+    // TODO: more tests
+    // TODO: macros for convinient graph generation
+
     auto function = jade::Function{};
     auto v0 = function.appendParam(jade::Type::I32);
 
@@ -85,13 +90,13 @@ TEST(GraphBuilder, Fib) {
         ASSERT_NE(bb0->next(), bb3->prev());
     }
 
+    // bb0
     auto builder0 = jade::InstrBulder{bb0};
     auto v1 = builder0.create<jade::CONST_I32>(1);
     auto v2 = builder0.create<jade::CONST_I64>(2);
     builder0.create<jade::GotoInstr>(bb1);
 
     {
-        // check bb0
         ASSERT_EQ(v1->getType(), jade::Type::I32);
         ASSERT_EQ(v2->getType(), jade::Type::I64);
         ASSERT_EQ(v1->getValue(), 1);
@@ -100,11 +105,40 @@ TEST(GraphBuilder, Fib) {
         ASSERT_EQ(v2->prev(), v1);
     }
 
+    // bb1
     auto builder1 = jade::InstrBulder{bb1};
     auto v3 = builder1.create<jade::PhiInstr>();
-    // auto v4 = builder1.create<jade::BinaryInstr>(
-    //     CAST(v3, jade::Value*),
-    //     CAST(v0, jade::Value*),
-    //     jade::BinaryInstr::Kind::LE
-    // );
+    auto v4 = builder1.create<jade::BinaryInstr>(
+        CAST(jade::Value*, v3),
+        CAST(jade::Value*, v0),
+        jade::BinaryInstr::Kind::LE
+    );
+    builder1.create<jade::IfInstr>(
+        CAST(jade::Value*, v4),
+        bb2,
+        bb3
+    );
+
+    // bb2
+    auto builder2 = jade::InstrBulder{bb2};
+    auto v5 = builder2.create<jade::PhiInstr>();
+    builder2.create<jade::RetInstr>(v5);
+
+    // bb3
+    auto builder3 = jade::InstrBulder{bb3};
+    auto v6 = builder3.create<jade::PhiInstr>();
+    auto c = builder3.create<jade::CONST_I32>(1);
+    auto v7 = builder3.create<jade::BinaryInstr>(
+        CAST(jade::Value*, v6),
+        CAST(jade::Value*, c),
+        jade::BinaryInstr::Kind::ADD
+    );
+    auto v8 = builder3.create<jade::CastInstr>(v7, jade::Type::I64);
+    auto v9 = builder3.create<jade::PhiInstr>();
+    auto v10 = builder3.create<jade::BinaryInstr>(
+        CAST(jade::Value*, v8),
+        CAST(jade::Value*, v9),
+        jade::BinaryInstr::Kind::MUL
+    );
+    builder3.create<jade::GotoInstr>(bb1);
 }
