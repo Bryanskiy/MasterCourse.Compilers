@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <ostream>
 #include <vector>
@@ -85,22 +86,62 @@ public:
     m_cond{cond}, m_false_bb{false_}, m_true_bb{true_} {}
 
   void dump(std::ostream& stream) override {
-    stream << "IF" << std::endl;
+    // TODO
   }
 
   Instruction* getCondition() { return m_cond; }
   BasicBlock* getFalseBB() { return m_false_bb; }
   BasicBlock* getTrueBB() { return m_true_bb; }
 
-  ~IfInstr() {}
 private:
   Instruction* m_cond{nullptr};
   BasicBlock* m_false_bb{nullptr};
   BasicBlock* m_true_bb{nullptr};
 };
 
+class GotoInstr final : public Instruction {
+public:
+  GotoInstr(BasicBlock* bb) : m_bb{bb} {}
+
+  void dump(std::ostream& stream) override {
+    // TODO
+  }
+private:
+  BasicBlock* m_bb{nullptr};
+};
+
+class PhiInstr final : public Instruction {
+public:
+  void addOption(Instruction* instr, BasicBlock* bb) {
+    m_instrs.push_back(instr);
+    m_bbs.push_back(bb);
+  }
+
+  void dump(std::ostream& stream) override {
+    // TODO
+  }
+private:
+  std::vector<Instruction*> m_instrs;
+  std::vector<BasicBlock*> m_bbs;
+};
+
 class BinaryInstr final : public Instruction {
-  // TODO
+public:
+  enum Kind {
+    LE,
+  };
+
+  BinaryInstr(Instruction* lhs, Instruction* rhs, Kind kind) : m_kind(kind) {
+    m_inputs[0] = lhs;
+    m_inputs[1] = rhs;
+  }
+
+  void dump(std::ostream& stream) override {
+    // TODO
+  }
+private:
+  Kind m_kind;
+  std::array<Instruction*, 2> m_inputs;
 };
 
 // for simplification constant is an instruction yet:
@@ -114,7 +155,6 @@ template <>                                                           \
 class Constant<cty> : public Instruction {                            \
 public:                                                               \
   Constant(cty val) : Instruction{Type::jadety}, m_val{val} {}        \
-  ~Constant() override {};                                            \
                                                                       \
   void dump(std::ostream& stream) override {                          \
                                                                       \
@@ -132,4 +172,6 @@ CONSTANT_SPECIALIZATION(std::int32_t, I32);
 CONSTANT_SPECIALIZATION(std::int16_t, I16);
 CONSTANT_SPECIALIZATION(std::int8_t, I8);
 
+
+#define CAST(src, dstTy) static_cast<dstTy>(src)
 } // namespace jade

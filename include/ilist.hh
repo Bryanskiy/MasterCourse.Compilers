@@ -70,9 +70,9 @@ public:
         return inserter->m_next.get();
     }
 
-    template<typename U>
-    T* append() {
-        return insert<U>(m_last);
+    template<typename U, typename... Args>
+    T* append(Args&&... args) {
+        return insert<U>(m_last, std::forward<Args>(args)...);
     }
 
     T* begin() { return m_start.get(); }
