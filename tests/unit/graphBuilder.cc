@@ -123,7 +123,7 @@ TEST(GraphBuilder, Fib) {
     auto v4 = builder1.create<CmpInstr>(
         static_cast<Value*>(v3),
         static_cast<Value*>(v0),
-        CmpInstr::Kind::LE
+        Opcode::LE
     );
     auto if_ = builder1.create<IfInstr>(
         static_cast<Value*>(v4),
@@ -163,14 +163,14 @@ TEST(GraphBuilder, Fib) {
     auto v7 = builder3.create<BinaryOp>(
         static_cast<Value*>(v6),
         static_cast<Value*>(c),
-        BinaryOp::Kind::ADD
+        Opcode::ADD
     );
     auto v8 = builder3.create<CastInstr>(v7, Type::I64);
     auto v9 = builder3.create<PhiInstr>(Type::create<Type::I64>());
     auto v10 = builder3.create<BinaryOp>(
         static_cast<Value*>(v8),
         static_cast<Value*>(v9),
-        BinaryOp::Kind::MUL
+        Opcode::MUL
     );
     builder3.create<GotoInstr>(bb1);
 

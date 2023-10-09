@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <set>
 
+#include "opcodes.hh"
 #include "ilist.hh"
 
 namespace jade {
@@ -23,6 +24,7 @@ public:
     None,
   };
 
+  Type() : m_tag{Tag::None} {}
   Type(Tag tag) : m_tag(tag) {}
 
   template<Tag tag>
@@ -116,14 +118,22 @@ public:
   virtual void dump(std::ostream& stream) = 0;
 
   friend InstrBulder;
+
+protected:
+  Opcode m_op;
 private:
   BasicBlock* m_bb{nullptr};
 };
 
 class IfInstr final : public Instruction {
 public:
-  IfInstr(Value* cond, BasicBlock* false_, BasicBlock* true_) :
-    m_cond{cond}, m_false_bb{false_}, m_true_bb{true_} {}
+  IfInstr() {
+    m_op = Opcode::IF;
+  }
+
+  IfInstr(Value* cond, BasicBlock* false_, BasicBlock* true_) : IfInstr() {
+    m_cond = cond; m_false_bb = false_; m_true_bb = true_;
+  }
 
   void dump(std::ostream& stream) override {
     // TODO
@@ -143,7 +153,13 @@ private:
 
 class GotoInstr final : public Instruction {
 public:
-  GotoInstr(BasicBlock* bb) : m_bb{bb} {}
+  GotoInstr() {
+    m_op = Opcode::GOTO;
+  }
+
+  GotoInstr(BasicBlock* bb) : GotoInstr() {
+    m_bb = bb;
+  }
 
   void dump(std::ostream& stream) override {
     // TODO
@@ -155,7 +171,13 @@ private:
 
 class RetInstr final : public Instruction {
 public:
-  RetInstr(Value* v) : m_v{v} {}
+  RetInstr() {
+    m_op = Opcode::RET;
+  }
+
+  RetInstr(Value* v) : RetInstr() {
+    m_v = v;
+  }
 
   void dump(std::ostream& stream) override {
     // TODO
@@ -166,7 +188,9 @@ private:
 
 class PhiInstr final : public Instruction {
 public:
-  PhiInstr(Type type) : Instruction{type} {}
+  PhiInstr(Type type) : Instruction{type} {
+    m_op = Opcode::PHI;
+  }
 
   void addOption(Instruction* instr, BasicBlock* bb) {
     assert(getType() == instr->getType());
@@ -184,12 +208,6 @@ private:
 
 class BinaryInstr : public Instruction {
 public:
-  enum Kind {
-    LE,
-    ADD,
-    MUL,
-  };
-
   BinaryInstr(Value* lhs, Value* rhs) {
     assert(lhs->getType() == rhs->getType());
     m_inputs[0] = lhs;
@@ -202,30 +220,22 @@ private:
 
 class CmpInstr final : public BinaryInstr {
 public:
-  enum Kind {
-    LE,
-  };
-
   void dump(std::ostream& stream) override {
     // TODO
   }
 
-  CmpInstr(Value* lhs, Value* rhs, Kind kind) : BinaryInstr(lhs, rhs), m_kind(kind) {
+  CmpInstr(Value* lhs, Value* rhs, Opcode kind) : BinaryInstr(lhs, rhs), m_kind(kind) {
     m_type = Type::create<Type::I1>();
   }
 
 private:
-  Kind m_kind;
+  Opcode m_kind;
 };
 
 class BinaryOp final : public BinaryInstr {
 public:
-  enum Kind {
-    ADD,
-    MUL,
-  };
 
-  BinaryOp(Value* lhs, Value* rhs, Kind kind) : BinaryInstr(lhs, rhs), m_kind(kind) {
+  BinaryOp(Value* lhs, Value* rhs, Opcode kind) : BinaryInstr(lhs, rhs), m_kind(kind) {
     m_type = lhs->getType();
   }
 
@@ -233,13 +243,17 @@ public:
     // TODO
   }
 private:
-  Kind m_kind;
+  Opcode m_kind;
 };
 
 class CastInstr final : public Instruction {
 public:
-  CastInstr(Value* val, Type type) : m_val{val}, m_cast{type} {
-    m_type = m_cast;
+  CastInstr() {
+    m_op = Opcode::CAST;
+  }
+
+  CastInstr(Value* val, Type type) : CastInstr() {
+    m_cast = type; m_type = m_cast; m_val = val;
   }
 
   void dump(std::ostream& stream) override {
@@ -256,11 +270,14 @@ template<class T>
 class Constant : public Instruction {};
 
 // TODO: how to map ctype and jade type in better way?
-#define CONSTANT_SPECIALIZATION(cty, jadety)                          \
+#define CONSTANT(cty, jadety)                          \
 template <>                                                           \
 class Constant<cty> : public Instruction {                            \
 public:                                                               \
-  Constant(cty val) : Instruction{Type::jadety}, m_val{val} {}        \
+  Constant(cty val) : Instruction{Type::jadety} {                     \
+    m_op = Opcode::CONST;                                             \
+    m_val = val;                                                      \
+  }                                                                   \
                                                                       \
   void dump(std::ostream& stream) override {                          \
                                                                       \
@@ -273,10 +290,10 @@ private:                                                              \
                                                                       \
 using Const##jadety = Constant<cty>;
 
-CONSTANT_SPECIALIZATION(std::int64_t, I64);
-CONSTANT_SPECIALIZATION(std::int32_t, I32);
-CONSTANT_SPECIALIZATION(std::int16_t, I16);
-CONSTANT_SPECIALIZATION(std::int8_t, I8);
+CONSTANT(std::int64_t, I64);
+CONSTANT(std::int32_t, I32);
+CONSTANT(std::int16_t, I16);
+CONSTANT(std::int8_t, I8);
 
 template<typename T, typename ...Args>
 T* InstrBulder::create(Args&&... args) {
