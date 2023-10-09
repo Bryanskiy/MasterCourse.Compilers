@@ -1,86 +1,209 @@
 #pragma once
 
 #include <cassert>
+#include <iterator>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace jade {
 
-template<typename T>
-class IList;
-
-// intrusive list:
-//
-//  +------+  next   +------+
-//  | node | ------> | node |
-//  +------+         +------+
-//     |
-//     | data, typeof(data) = T
-//     V
-//  +------+
-//  | data |
-//  +------+
-
-// TODO: make it iterator
-template<typename T>
 class IListNode {
+    IListNode* m_next{nullptr};
+    IListNode* m_prev{nullptr};
+
 public:
-    T* next() { return m_next.get(); }
-    T* prev() { return m_prev; }
-protected:
+    IListNode* getNext() { return m_next; }
+    IListNode* getPrev() { return m_prev; }
 
-    std::unique_ptr<T> m_next{nullptr};
-    T* m_prev{nullptr};
-
-private:
-    friend class IList<T>;
-
-    // change owner
-    std::unique_ptr<T> next_unique() { return std::move(m_next); } // TODO: is it safe?
+    void setNext(IListNode* next) { m_next = next; }
+    void setPrev(IListNode* prev) { m_prev = prev; }
 };
 
-template<typename T>
-class IList {
+struct IListBase {
+    void remove(IListNode* marker) {
+        auto* prev = marker->getPrev();
+        auto* next = marker->getNext();
+
+        next->setPrev(prev);
+        prev->setNext(next);
+
+        marker->setNext(nullptr);
+        marker->setPrev(nullptr);
+    }
+
+    void insertBeforeBase(IListNode* inserter, IListNode* elem) {
+        assert(inserter);
+        assert(elem);
+
+        auto* prev = inserter->getPrev();
+        if (prev) {
+            prev->setNext(elem);
+        }
+        inserter->setPrev(elem);
+
+        elem->setNext(inserter);
+        elem->setPrev(prev);
+    }
+
+    void insertAfterBase(IListNode* inserter, IListNode* elem) {
+        assert(inserter);
+        assert(elem);
+
+        auto* next = inserter->getNext();
+        if (next) {
+            next->setPrev(elem);
+        }
+        inserter->setNext(elem);
+
+        elem->setNext(next);
+        elem->setPrev(inserter);
+    }
+};
+
+template<typename NodeTy>
+class IListIterator {
+    // static_assert(std::is_base_of<IListNode, NodeTy>::value,
+    //     "unable to create IList iterator: IListNode exprected");
+
 public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+    using value_type = NodeTy;
+    using pointer = value_type*;
+    using reference = value_type&;
 
-    // T is a IListNode<T>
-    template<typename U, typename... Args>
-    T* insert(T* const inserter, Args&&... args) {
-        auto elem = std::unique_ptr<T>(new U(std::forward<Args>(args)...));
+    explicit IListIterator(pointer ptr) : m_ptr{ptr} {}
 
-        if (inserter == nullptr) {
-            assert(m_start == nullptr);
-
-            m_last = elem.get();
-            m_start = std::move(elem);
-            return m_last;
-        }
-
-        auto next = std::move(inserter->next_unique());
-        elem->m_prev = inserter;
-        inserter->m_next = std::move(elem);
-
-        if (next == nullptr) {
-            assert(inserter == m_last);
-            m_last = inserter->m_next.get();
-        } else {
-            inserter->m_next->m_next = std::move(next);
-            next->m_prev = inserter->m_next.get();
-        }
-
-        return inserter->m_next.get();
+    NodeTy* getPtr() {
+        return m_ptr;
     }
 
-    template<typename U, typename... Args>
-    T* append(Args&&... args) {
-        return insert<U>(m_last, std::forward<Args>(args)...);
+    // Accessors
+    reference operator*() const { return *m_ptr; }
+    pointer operator->() const noexcept {
+        return m_ptr;
+    }
+    IListIterator getNext() {
+        return IListIterator(static_cast<NodeTy*>(m_ptr->getNext()));
     }
 
-    T* begin() { return m_start.get(); }
-    T* end() { return m_last; }
+    // Comparison operators
+    bool operator==(const IListIterator& rhs) const noexcept {
+      return m_ptr == rhs.m_ptr;
+    }
+
+    bool operator!=(const IListIterator& rhs) const noexcept {
+      return this->m_ptr != rhs.m_ptr;
+    }
+
+    // Increment and decrement operators
+    IListIterator& operator++() {
+        m_ptr = static_cast<pointer>(m_ptr->getNext());
+        return *this;
+    }
+
+    IListIterator& operator--() {
+        m_ptr = static_cast<pointer>(m_ptr->getPrev());
+        return *this;
+    }
+
+    IListIterator operator++(int) {
+        auto tmp = *this;
+        operator++();
+        return tmp;
+    }
+
+    IListIterator operator--(int) {
+        auto tmp = *this;
+        operator--();
+        return tmp;
+    }
 
 private:
-    std::unique_ptr<T> m_start{nullptr};
-    T* m_last{nullptr};
+    pointer m_ptr{nullptr};
+};
+
+template<typename NodeTy, bool Owner>
+struct IListAllocTraits {};
+
+template<typename NodeTy>
+struct IListAllocTraits<NodeTy, true> {
+    static void deallocate(NodeTy* node) { delete node; }
+};
+
+template<typename NodeTy>
+using IListOwner = IListAllocTraits<NodeTy, true>;
+
+template<typename NodeTy>
+struct IListAllocTraits<NodeTy, false> {
+    static void deallocate(NodeTy* node) {}
+};
+
+template<typename NodeTy>
+using IListBorrower = IListAllocTraits<NodeTy, false>;
+
+// TODO: IList parametrized with iterator to implement traversal algorithms on
+// general interface
+template<typename NodeTy>
+struct IListDefaultTraits : IListOwner<NodeTy> {};
+
+// TODO: add proxy elem at the start to avoid boilerplate checks during insert
+template<typename NodeTy, typename Traits = IListDefaultTraits<NodeTy>>
+class IList : public IListBase {
+    // static_assert(std::is_base_of_v<IListNode, NodeTy>,
+    //     "unable to create IList: IListNode exprected");
+
+public:
+    using iterator = IListIterator<NodeTy>;
+    using value_type = typename iterator::value_type;
+    using pointer = typename iterator::pointer;
+
+public:
+    ~IList() {
+        iterator it = begin();
+        while (it != end()) {
+            iterator next = it.getNext();
+            Traits::deallocate(it.getPtr());
+            it = next;
+        }
+    }
+
+    iterator begin() const {
+        return iterator{m_start};
+    }
+
+    iterator end() const {
+        return iterator{nullptr};
+    }
+
+    void push_back(pointer node) {
+        insertBefore(end(), node);
+    }
+
+    iterator insertBefore(iterator I, pointer node) {
+        if ((I == begin()) && (I == end())) {
+            m_start = m_last = node;
+            return iterator{node};
+        }
+
+        if (I == begin()) {
+            m_start = node;
+        }
+
+        if (I == end()) {
+            insertAfterBase(m_last, node);
+            m_last = node;
+            return iterator{node};
+        }
+
+        insertBeforeBase(I.getPtr(), node);
+        return iterator{node};
+    }
+
+private:
+    pointer m_last{nullptr};
+    pointer m_start{nullptr};
 };
 
 } // namespace jade

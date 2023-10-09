@@ -76,24 +76,34 @@ TEST(GraphBuilder, Fib) {
     auto bb2 = function.appendBB();
     auto bb3 = function.appendBB();
 
+    bb0->addSuccessor(bb1);
+
+    bb1->addSuccessor(bb2);
+    bb1->addSuccessor(bb3);
+    bb1->addPredecessor(bb0);
+    bb1->addPredecessor(bb3);
+
+    bb2->addPredecessor(bb1);
+
+    bb3->addPredecessor(bb1);
+    bb3->addSuccessor(bb1);
+
     {
         // check intrusive bb list
         // TODO: rewrite after iter impl
-        ASSERT_EQ(bb0->prev(), nullptr);
-        ASSERT_EQ(bb0->next(), bb1);
-        ASSERT_EQ(bb1->prev(), bb0);
-        ASSERT_EQ(bb1->next(), bb2);
-        ASSERT_EQ(bb2->prev(), bb1);
-        ASSERT_EQ(bb2->next(), bb3);
-        ASSERT_EQ(bb3->prev(), bb2);
-        ASSERT_EQ(bb3->next(), nullptr);
-        ASSERT_NE(bb0->next(), bb3->prev());
+        ASSERT_EQ(bb0->getNext(), bb1);
+        ASSERT_EQ(bb1->getPrev(), bb0);
+        ASSERT_EQ(bb1->getNext(), bb2);
+        ASSERT_EQ(bb2->getPrev(), bb1);
+        ASSERT_EQ(bb2->getNext(), bb3);
+        ASSERT_EQ(bb3->getPrev(), bb2);
+        ASSERT_NE(bb0->getNext(), bb3->getPrev());
     }
 
     // bb0
     auto builder0 = InstrBulder{bb0};
-    auto v1 = builder0.create<CONST_I64>(1);
-    auto v2 = builder0.create<CONST_I32>(2);
+    auto v1 = builder0.create<ConstI64>(1);
+    auto v2 = builder0.create<ConstI32>(2);
     builder0.create<GotoInstr>(bb1);
 
     {
@@ -101,8 +111,8 @@ TEST(GraphBuilder, Fib) {
         ASSERT_EQ(v2->getType(), Type::I32);
         ASSERT_EQ(v1->getValue(), 1);
         ASSERT_EQ(v2->getValue(), 2);
-        ASSERT_EQ(v1->next(), v2);
-        ASSERT_EQ(v2->prev(), v1);
+        ASSERT_EQ(v1->getNext(), v2);
+        ASSERT_EQ(v2->getPrev(), v1);
 
         ASSERT_EQ(v1->getParent(), bb0);
     }
@@ -122,12 +132,11 @@ TEST(GraphBuilder, Fib) {
     );
 
     {
-        ASSERT_EQ(v3->prev(), nullptr);
-        ASSERT_EQ(v3->next(), v4);
-        ASSERT_EQ(v4->prev(), v3);
-        ASSERT_EQ(v4->next(), if_);
-        ASSERT_EQ(if_->prev(), v4);
-        ASSERT_EQ(if_->next(), nullptr);
+        ASSERT_EQ(v3->getPrev(), nullptr);
+        ASSERT_EQ(v3->getNext(), v4);
+        ASSERT_EQ(v4->getPrev(), v3);
+        ASSERT_EQ(v4->getNext(), if_);
+        ASSERT_EQ(if_->getPrev(), v4);
 
         ASSERT_EQ(v3->getType(), Type::I32);
         ASSERT_EQ(v4->getType(), Type::I1);
@@ -141,10 +150,8 @@ TEST(GraphBuilder, Fib) {
     auto ret = builder2.create<RetInstr>(v5);
 
     {
-        ASSERT_EQ(v5->prev(), nullptr);
-        ASSERT_EQ(v5->next(), ret);
-        ASSERT_EQ(ret->prev(), v5);
-        ASSERT_EQ(ret->next(), nullptr);
+        ASSERT_EQ(v5->getNext(), ret);
+        ASSERT_EQ(ret->getPrev(), v5);
 
         ASSERT_EQ(v5->getType(), Type::I64);
     }
@@ -152,7 +159,7 @@ TEST(GraphBuilder, Fib) {
     // bb3
     auto builder3 = InstrBulder{bb3};
     auto v6 = builder3.create<PhiInstr>(Type::create<Type::I32>());
-    auto c = builder3.create<CONST_I32>(1);
+    auto c = builder3.create<ConstI32>(1);
     auto v7 = builder3.create<BinaryOp>(
         static_cast<Value*>(v6),
         static_cast<Value*>(c),
@@ -194,7 +201,7 @@ TEST(GraphBuilder, Fib) {
     {
         // check successors and preds.
         auto checker = [](auto lhsBegin, auto lhsEnd, auto rhsBegin, auto rhsEnd) {
-            for(; lhsBegin < lhsEnd; ++lhsBegin, ++rhsBegin) {
+            for(; lhsBegin != lhsEnd; ++lhsBegin, ++rhsBegin) {
                 ASSERT_EQ(*lhsBegin, *rhsBegin);
             }
 
@@ -203,34 +210,42 @@ TEST(GraphBuilder, Fib) {
 
         {
             auto lhsPreds = std::array<BasicBlock*, 0>{};
-            checker(bb0->predsBegin(), bb0->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+            auto rhsPreds = bb0->predecessors();
+            checker(rhsPreds.begin(), rhsPreds.end(), lhsPreds.begin(), lhsPreds.end());
 
             auto lhsSuccs = std::array<BasicBlock*, 1>{bb1};
-            checker(bb0->succsBegin(), bb0->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+            auto rhsSuccs = bb0->successors();
+            checker(rhsSuccs.begin(), rhsSuccs.end(), lhsSuccs.begin(), lhsSuccs.end());
         }
 
         {
             auto lhsPreds = std::array<BasicBlock*, 2>{bb0, bb3};
-            checker(bb1->predsBegin(), bb1->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+            auto rhsPreds = bb1->predecessors();
+            checker(rhsPreds.begin(), rhsPreds.end(), lhsPreds.begin(), lhsPreds.end());
 
-            auto lhsSuccs = std::array<BasicBlock*, 2>{bb3, bb2};
-            checker(bb1->succsBegin(), bb1->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+            auto lhsSuccs = std::array<BasicBlock*, 2>{bb2, bb3};
+            auto rhsSuccs = bb1->successors();
+            checker(rhsSuccs.begin(), rhsSuccs.end(), lhsSuccs.begin(), lhsSuccs.end());
         }
 
         {
             auto lhsPreds = std::array<BasicBlock*, 1>{bb1};
-            checker(bb3->predsBegin(), bb3->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+            auto rhsPreds = bb3->predecessors();
+            checker(rhsPreds.begin(), rhsPreds.end(), lhsPreds.begin(), lhsPreds.end());
 
             auto lhsSuccs = std::array<BasicBlock*, 1>{bb1};
-            checker(bb3->succsBegin(), bb3->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+            auto rhsSuccs = bb3->successors();
+            checker(rhsSuccs.begin(), rhsSuccs.end(), lhsSuccs.begin(), lhsSuccs.end());
         }
 
         {
             auto lhsPreds = std::array<BasicBlock*, 1>{bb1};
-            checker(bb2->predsBegin(), bb2->predsEnd(), lhsPreds.begin(), lhsPreds.end());
+            auto rhsPreds = bb2->predecessors();
+            checker(rhsPreds.begin(), rhsPreds.end(), lhsPreds.begin(), lhsPreds.end());
 
             auto lhsSuccs = std::array<BasicBlock*, 0>{};
-            checker(bb2->succsBegin(), bb2->succsEnd(), lhsSuccs.begin(), lhsSuccs.end());
+            auto rhsSuccs = bb2->successors();
+            checker(rhsSuccs.begin(), rhsSuccs.end(), lhsSuccs.begin(), lhsSuccs.end());
         }
     }
 }

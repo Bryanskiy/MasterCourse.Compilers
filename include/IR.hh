@@ -6,6 +6,7 @@
 #include <ostream>
 #include <vector>
 #include <cstdint>
+#include <set>
 
 #include "ilist.hh"
 
@@ -42,34 +43,57 @@ public:
   Type::Tag getType() const { return m_type.getType(); }
 protected:
   Type m_type{Type::None};
+  std::string m_name;
 };
 
 class InstrBulder;
 class Instruction;
 
-class BasicBlock final : public IListNode<BasicBlock> {
+template<typename IT>
+class Range {
+  IT m_begin;
+  IT m_end;
+
+public:
+  IT begin() { return m_begin; }
+  IT end() { return m_end; }
+
+  Range(IT begin, IT end) : m_begin(begin), m_end(end) {}
+};
+
+template<typename IT>
+Range(IT begin, IT end) -> Range<IT>;
+
+class BasicBlock final : public IListNode {
 public:
 
-  auto predsBegin() { return m_preds.begin(); }
-  auto predsEnd() { return m_preds.end(); }
+  auto successors() { return Range(m_succs.begin(), m_succs.end()); }
+  auto predecessors() { return Range(m_preds.begin(), m_preds.end()); }
 
-  auto succsBegin() { return m_succs.begin(); }
-  auto succsEnd() { return m_succs.end(); }
+  void addSuccessor(BasicBlock* succs) { m_succs.insert(succs); }
+  void addPredecessor(BasicBlock* pred) { m_preds.insert(pred); }
+
+  void removeSuccessor(BasicBlock* succs) { m_succs.erase(succs); }
+  void removePredecessor(BasicBlock* pred) { m_preds.erase(pred); }
 
 private:
   friend InstrBulder;
 
   IList<Instruction> m_instrs;
-  std::vector<BasicBlock*> m_preds;
-  std::vector<BasicBlock*> m_succs;
+  std::set<BasicBlock*> m_preds;
+  std::set<BasicBlock*> m_succs;
 };
 
 class InstrBulder final {
 public:
-  InstrBulder(BasicBlock* bb) : m_bb{bb} {}
+  using iterator = IListIterator<Instruction>;
+
+  InstrBulder(BasicBlock* bb) : m_bb{bb} {
+    m_inserter = m_bb->m_instrs.end();
+  }
 
   void setInsertPoint(Instruction* inserter) {
-    m_inserter = inserter;
+    m_inserter = iterator(inserter);
   }
 
   template<typename T, typename ...Args>
@@ -77,16 +101,18 @@ public:
 
 private:
   BasicBlock* m_bb{nullptr};
-  Instruction* m_inserter{nullptr};
+  iterator m_inserter{nullptr};
 };
 
-class Instruction : public Value, public IListNode<Instruction> {
+class Instruction : public Value, public IListNode {
 public:
   Instruction() = default;
   Instruction(Type type) : Value{type} {}
+  Instruction(Type type, BasicBlock* bb) : Value{type}, m_bb(bb) {}
   virtual ~Instruction() = default;
 
   BasicBlock* getParent() { return m_bb; }
+  void setParent(BasicBlock* bb) { m_bb = bb; }
   virtual void dump(std::ostream& stream) = 0;
 
   friend InstrBulder;
@@ -245,7 +271,7 @@ private:                                                              \
   cty m_val;                                                          \
 };                                                                    \
                                                                       \
-using CONST_##jadety = Constant<cty>;
+using Const##jadety = Constant<cty>;
 
 CONSTANT_SPECIALIZATION(std::int64_t, I64);
 CONSTANT_SPECIALIZATION(std::int32_t, I32);
@@ -254,25 +280,9 @@ CONSTANT_SPECIALIZATION(std::int8_t, I8);
 
 template<typename T, typename ...Args>
 T* InstrBulder::create(Args&&... args) {
-  auto inserted = m_bb->m_instrs.insert<T>(m_inserter, std::forward<Args>(args)...);
-  inserted->m_bb = m_bb;
-
-  auto elem = static_cast<T*>(inserted);
-  // bump inserter
-  m_inserter = elem;
-
-  auto linker = [](BasicBlock* lhs, BasicBlock* rhs) {
-    lhs->m_succs.push_back(rhs);
-    rhs->m_preds.push_back(lhs);
-  };
-
-  if constexpr (std::is_same_v<T, IfInstr>) {
-    linker(m_bb, elem->m_true_bb);
-    linker(m_bb, elem->m_false_bb);
-  } else if constexpr (std::is_same_v<T, GotoInstr>) {
-    linker(m_bb, elem->m_bb);
-  }
-
+  auto* elem = new T(args...);
+  elem->setParent(m_bb);
+  m_bb->m_instrs.insertBefore(m_inserter, elem);
   return elem;
 }
 

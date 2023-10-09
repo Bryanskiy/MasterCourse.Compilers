@@ -8,7 +8,7 @@
 
 namespace jade {
 
-class Param : public Value, public IListNode<Param> {
+class Param : public Value, public IListNode {
 public:
   Param(Type type) : Value{type} {}
 };
@@ -17,11 +17,15 @@ class Function {
 public:
 
   BasicBlock* appendBB() {
-    return m_bbs.append<BasicBlock>();
+    auto* bb = new BasicBlock{};
+    m_bbs.push_back(bb);
+    return bb;
   }
 
   Param* appendParam(Type type) {
-    return m_params.append<Param>(type);
+    auto* param = new Param{type};
+    m_params.push_back(param);
+    return param;
   }
 
 private:
