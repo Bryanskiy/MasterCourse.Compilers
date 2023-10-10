@@ -28,6 +28,8 @@ public:
         return param;
     }
 
+    auto getBasicBlocks() { return Range{m_bbs.begin(), m_bbs.end()}; }
+
 private:
     IList<BasicBlock> m_bbs;
     IList<Param> m_params;
