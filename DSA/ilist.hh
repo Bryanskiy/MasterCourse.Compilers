@@ -91,7 +91,7 @@ public:
     }
 
     bool operator!=(const IListIterator& rhs) const noexcept {
-      return this->m_ptr != rhs.m_ptr;
+      return m_ptr != rhs.m_ptr;
     }
 
     // Increment and decrement operators
@@ -153,7 +153,22 @@ public:
     using value_type = typename iterator::value_type;
     using pointer = typename iterator::pointer;
 
+private:
+    // TODO: if not only IListBorrower? How to dispatch other traits?
+    using borrowed = IList<NodeTy, IListBorrower<NodeTy>>;
+
+    //friend to IList with other traits(partial sp. not supported)
+    template<typename OtherNodeTy, typename OtherTraits>
+    friend  class IList;
 public:
+    borrowed borrow() {
+        borrowed ret;
+        ret.m_last = m_last;
+        ret.m_start = m_start;
+
+        return ret;
+    }
+
     ~IList() {
         iterator it = begin();
         while (it != end()) {

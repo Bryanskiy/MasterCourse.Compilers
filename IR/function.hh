@@ -5,12 +5,38 @@
 
 #include "IR.hh"
 #include "ilist.hh"
+#include "graph.hh"
 
 namespace jade {
+
+using BasicBlocks = IList<BasicBlock>;
+using BorrowedBBs = IList<BasicBlock, IListBorrower<BasicBlock>>;
 
 class Param : public Value, public IListNode {
 public:
     Param(Type type) : Value{type} {}
+};
+using Params =  IList<Param>;
+
+class BasicBlocksGraph {
+private:
+    BorrowedBBs m_bbs;
+
+public:
+    // Graph Trait impl
+    using NodeTy = BasicBlock*;
+    using EdgesItTy = decltype(m_bbs.begin().getPtr()->successors().begin());
+
+    static NodeTy entry(BasicBlocksGraph& G) {
+        return G.m_bbs.begin().getPtr();
+    }
+
+    static EdgesItTy edgeBegin(NodeTy node) { return node->successors().begin(); }
+    static EdgesItTy edgeEnd(NodeTy node) { return node->successors().end(); }
+public:
+    BasicBlocksGraph(BorrowedBBs c) : m_bbs{c} {}
+
+    auto nodes() { return Range{m_bbs.begin(), m_bbs.end()}; }
 };
 
 class Function {
@@ -28,11 +54,11 @@ public:
         return param;
     }
 
-    auto getBasicBlocks() { return Range{m_bbs.begin(), m_bbs.end()}; }
+    auto getBasicBlocks() { return BasicBlocksGraph(m_bbs.borrow()); }
 
 private:
-    IList<BasicBlock> m_bbs;
-    IList<Param> m_params;
+    BasicBlocks m_bbs;
+    Params m_params;
 };
 
 } // namespace jade

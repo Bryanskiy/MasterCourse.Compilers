@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <set>
+#include <list>
 
 #include "opcodes.hh"
 #include "ilist.hh"
@@ -72,18 +73,18 @@ public:
     auto successors() { return Range(m_succs.begin(), m_succs.end()); }
     auto predecessors() { return Range(m_preds.begin(), m_preds.end()); }
 
-    void addSuccessor(BasicBlock* succs) { m_succs.insert(succs); }
-    void addPredecessor(BasicBlock* pred) { m_preds.insert(pred); }
+    void addSuccessor(BasicBlock* succs) { m_succs.push_back(succs); }
+    void addPredecessor(BasicBlock* pred) { m_preds.push_back(pred); }
 
-    void removeSuccessor(BasicBlock* succs) { m_succs.erase(succs); }
-    void removePredecessor(BasicBlock* pred) { m_preds.erase(pred); }
+    void removeSuccessor(BasicBlock* succs) { m_succs.remove(succs); }
+    void removePredecessor(BasicBlock* pred) { m_preds.remove(pred); }
 
 private:
     friend InstrBulder;
 
     IList<Instruction> m_instrs;
-    std::set<BasicBlock*> m_preds;
-    std::set<BasicBlock*> m_succs;
+    std::list<BasicBlock*> m_preds;
+    std::list<BasicBlock*> m_succs;
 };
 
 class InstrBulder final {
