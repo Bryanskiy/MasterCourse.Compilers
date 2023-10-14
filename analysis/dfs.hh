@@ -2,17 +2,18 @@
 
 #include <unordered_map>
 
-#include "IR.hh"
 #include "PM.hh"
-#include "function.hh"
+#include "../IR/IR.hh"
 
 namespace jade {
+
+class Function;
 
 class DFS : public Pass {
 public:
     DFS(Function* graph) : Pass{graph} {}
 
-    virtual std::string_view name() const override { return "DFS"; }
+    virtual std::string name() const override { return "DFS"; }
     virtual void run() override;
 
     void reset() { m_visited.clear(); }

@@ -10,7 +10,7 @@ class Pass {
 public:
     Pass(Function* graph) : m_graph{graph} {}
 
-    virtual std::string_view name() const;
+    virtual std::string name() const;
     virtual void run() = 0;
 protected:
     Function* m_graph;

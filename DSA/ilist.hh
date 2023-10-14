@@ -63,9 +63,6 @@ struct IListBase {
 
 template<typename NodeTy>
 class IListIterator {
-    // static_assert(std::is_base_of<IListNode, NodeTy>::value,
-    //     "unable to create IList iterator: IListNode exprected");
-
 public:
     using iterator_category = std::bidirectional_iterator_tag;
     using difference_type = std::ptrdiff_t;
@@ -148,11 +145,8 @@ using IListBorrower = IListAllocTraits<NodeTy, false>;
 template<typename NodeTy>
 struct IListDefaultTraits : IListOwner<NodeTy> {};
 
-// TODO: add proxy elem at the start to avoid boilerplate checks during insert
 template<typename NodeTy, typename Traits = IListDefaultTraits<NodeTy>>
 class IList : public IListBase {
-    // static_assert(std::is_base_of_v<IListNode, NodeTy>,
-    //     "unable to create IList: IListNode exprected");
 
 public:
     using iterator = IListIterator<NodeTy>;
@@ -181,6 +175,7 @@ public:
         insertBefore(end(), node);
     }
 
+    // TODO: add proxy elem at the start to avoid boilerplate checks
     iterator insertBefore(iterator I, pointer node) {
         if ((I == begin()) && (I == end())) {
             m_start = m_last = node;
