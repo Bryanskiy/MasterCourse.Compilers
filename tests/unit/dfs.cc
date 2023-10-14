@@ -31,18 +31,16 @@ TEST(Dfs, fst) {
     auto bb3 = function.appendBB();
 
     bb0->addSuccessor(bb1);
-
     bb1->addSuccessor(bb2);
     bb1->addSuccessor(bb3);
-    bb1->addPredecessor(bb0);
-    bb1->addPredecessor(bb3);
-
-    bb2->addPredecessor(bb1);
-
-    bb3->addPredecessor(bb1);
     bb3->addSuccessor(bb1);
 
     // RUN DFS
     auto graph = function.getBasicBlocks();
     auto dfs = DFSIterator<BasicBlocksGraph>::begin(graph);
+    ASSERT_EQ(*dfs, bb0);
+    ASSERT_EQ(*(++dfs), bb1);
+    ASSERT_EQ(*(++dfs), bb2);
+    ASSERT_EQ(*(++dfs), bb3);
+    ASSERT_EQ((++dfs), DFSIterator<BasicBlocksGraph>::end(graph));
 }

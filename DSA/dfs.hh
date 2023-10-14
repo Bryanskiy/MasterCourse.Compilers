@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <vector>
 
 #include "graph.hh"
@@ -24,14 +25,15 @@ public:
 
     DFSIterator(value_type node) {
         m_stack.push_back(VE(node, GraphTy::edgeBegin(node)));
+        m_visited.insert(node);
     }
 
     static DFSIterator begin(GraphTy& G) { return DFSIterator{GraphTy::entry(G)}; }
     static DFSIterator end(GraphTy& G) { return DFSIterator{}; }
 
     // Accessors
-    reference operator*() const { return m_stack.back().first; }
-    pointer operator->() const { return &*this; }
+    reference operator*() { return m_stack.back().first; }
+    pointer operator->() { return &*this; }
 
     // Comparison operators
     bool operator==(const DFSIterator &x) const {
@@ -41,22 +43,35 @@ public:
 
     // Increment operators
     DFSIterator& operator++() {
-
+        step();
         return *this;
     }
 
 private:
 
     void step() {
-        NodeTy currentNode = m_stack.back().first;
-        EdgesItTy currentEdge = m_stack.back().second;
+        while(!m_stack.empty()) {
+            NodeTy currentNode = m_stack.back().first;
+            EdgesItTy EdgeIt = m_stack.back().second;
 
-        // TODO
+            while(EdgeIt != GraphTy::edgeEnd(currentNode)) {
+                NodeTy nextNode = *EdgeIt;
+                if(m_visited.find(nextNode) == m_visited.end()) {
+                    m_stack.push_back(VE(nextNode, GraphTy::edgeBegin(nextNode)));
+                    m_visited.insert(nextNode);
+                    return;
+                }
+                ++EdgeIt;
+            }
+
+            m_stack.pop_back();
+        }
     }
 
 private:
-    using VE = std::pair<typename Traits::NodeTy, typename Traits::EdgesItTy>;
+    using VE = std::pair<NodeTy, EdgesItTy>;
     std::vector<VE> m_stack;
+    std::set<NodeTy> m_visited;
 };
 
 } // namespace jade

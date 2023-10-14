@@ -14,6 +14,8 @@
 
 namespace jade {
 
+class Function;
+
 class Type {
 public:
     enum Tag {
@@ -69,6 +71,7 @@ Range(IT begin, IT end) -> Range<IT>;
 
 class BasicBlock final : public IListNode {
 public:
+    BasicBlock() = default;
 
     auto successors() { return Range(m_succs.begin(), m_succs.end()); }
     auto predecessors() { return Range(m_preds.begin(), m_preds.end()); }
@@ -85,6 +88,7 @@ private:
     IList<Instruction> m_instrs;
     std::list<BasicBlock*> m_preds;
     std::list<BasicBlock*> m_succs;
+    Function* m_function{nullptr};
 };
 
 class InstrBulder final {

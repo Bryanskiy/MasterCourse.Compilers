@@ -59,6 +59,7 @@ public:
 private:
     BasicBlocks m_bbs;
     Params m_params;
+    std::size_t m_valCounter{0};
 };
 
 } // namespace jade
