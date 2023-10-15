@@ -1,46 +1,56 @@
 #include "gtest/gtest.h"
+#include <vector>
 #include "dfs.hh"
+#include "graphs.hh"
 #include "function.hh"
 
 using namespace jade;
+
 
 TEST(Dfs, Check) {
     ASSERT_TRUE(true);
 }
 
-//      +-----+
-//      | bb0 |
-//      +-----+
-//         |
-//         V
-//      +-----+    +-----+
-//   +->| bb1 |--->| bb2 |
-//   |  +-----+    +-----+
-//   |     |
-//   |     V
-//   |  +-----+
-//   ---| bb3 |
-//      +-----+
-TEST(Dfs, fst) {
-    // CREATE GRAPH
-    auto function = Function{};
-
-    auto bb0 = function.appendBB();
-    auto bb1 = function.appendBB();
-    auto bb2 = function.appendBB();
-    auto bb3 = function.appendBB();
-
-    bb0->addSuccessor(bb1);
-    bb1->addSuccessor(bb2);
-    bb1->addSuccessor(bb3);
-    bb3->addSuccessor(bb1);
-
-    // RUN DFS
+// graphs.hh - example 1
+TEST(Dfs, example1G) {
+    auto function = example1();
     auto graph = function.getBasicBlocks();
+    auto range = graph.nodes();
+
+    std::vector<BasicBlock*> bbs;
+    for(auto it = range.begin(); it != range.end(); ++it) {
+        bbs.push_back(&*it);
+    }
+
     auto dfs = DFSIterator<BasicBlocksGraph>::begin(graph);
-    ASSERT_EQ(*dfs, bb0);
-    ASSERT_EQ(*(++dfs), bb1);
-    ASSERT_EQ(*(++dfs), bb2);
-    ASSERT_EQ(*(++dfs), bb3);
+
+    ASSERT_EQ(*dfs, bbs[0]);
+    ASSERT_EQ(*(++dfs), bbs[1]);
+    ASSERT_EQ(*(++dfs), bbs[2]);
+    ASSERT_EQ(*(++dfs), bbs[3]);
+    ASSERT_EQ((++dfs), DFSIterator<BasicBlocksGraph>::end(graph));
+}
+
+// graphs.hh - example 2
+TEST(Dfs, example2G) {
+    auto function = example2();
+    auto graph = function.getBasicBlocks();
+
+    auto range = graph.nodes();
+
+    std::vector<BasicBlock*> bbs;
+    for(auto it = range.begin(); it != range.end(); ++it) {
+        bbs.push_back(&*it);
+    }
+
+    auto dfs = DFSIterator<BasicBlocksGraph>::begin(graph);
+
+    ASSERT_EQ(*dfs, bbs[0]);
+    ASSERT_EQ(*(++dfs), bbs[1]);
+    ASSERT_EQ(*(++dfs), bbs[2]);
+    ASSERT_EQ(*(++dfs), bbs[5]);
+    ASSERT_EQ(*(++dfs), bbs[4]);
+    ASSERT_EQ(*(++dfs), bbs[3]);
+    ASSERT_EQ(*(++dfs), bbs[6]);
     ASSERT_EQ((++dfs), DFSIterator<BasicBlocksGraph>::end(graph));
 }
