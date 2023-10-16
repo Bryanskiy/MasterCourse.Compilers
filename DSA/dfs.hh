@@ -24,11 +24,11 @@ public:
     DFSIterator() = default;
 
     DFSIterator(value_type node) {
-        m_stack.push_back(VE(node, GraphTy::edgeBegin(node)));
+        m_stack.push_back(VE(node, Traits::edgeBegin(node)));
         m_visited.insert(node);
     }
 
-    static DFSIterator begin(GraphTy& G) { return DFSIterator{GraphTy::entry(G)}; }
+    static DFSIterator begin(GraphTy& G) { return DFSIterator{Traits::entry(G)}; }
     static DFSIterator end(GraphTy& G) { return DFSIterator{}; }
 
     // Accessors
@@ -54,10 +54,10 @@ private:
             NodeTy currentNode = m_stack.back().first;
             EdgesItTy EdgeIt = m_stack.back().second;
 
-            while(EdgeIt != GraphTy::edgeEnd(currentNode)) {
+            while(EdgeIt != Traits::edgeEnd(currentNode)) {
                 NodeTy nextNode = *EdgeIt;
                 if(m_visited.find(nextNode) == m_visited.end()) {
-                    m_stack.push_back(VE(nextNode, GraphTy::edgeBegin(nextNode)));
+                    m_stack.push_back(VE(nextNode, Traits::edgeBegin(nextNode)));
                     m_visited.insert(nextNode);
                     return;
                 }

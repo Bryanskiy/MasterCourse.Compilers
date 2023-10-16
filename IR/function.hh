@@ -23,20 +23,23 @@ private:
     BorrowedBBs m_bbs;
 
 public:
-    // Graph Trait impl
+    BasicBlocksGraph() = default;
+    BasicBlocksGraph(BorrowedBBs c) : m_bbs{c} {}
+
+    auto nodes() { return Range{m_bbs.begin(), m_bbs.end()}; }
+};
+
+template<>
+struct GraphTraits<BasicBlocksGraph> {
     using NodeTy = BasicBlock*;
-    using EdgesItTy = decltype(m_bbs.begin().getPtr()->successors().begin());
+    using EdgesItTy = decltype(BasicBlocksGraph().nodes().begin().getPtr()->successors().begin());
 
     static NodeTy entry(BasicBlocksGraph& G) {
-        return G.m_bbs.begin().getPtr();
+        return G.nodes().begin().getPtr();
     }
 
     static EdgesItTy edgeBegin(NodeTy node) { return node->successors().begin(); }
     static EdgesItTy edgeEnd(NodeTy node) { return node->successors().end(); }
-public:
-    BasicBlocksGraph(BorrowedBBs c) : m_bbs{c} {}
-
-    auto nodes() { return Range{m_bbs.begin(), m_bbs.end()}; }
 };
 
 class Function {
