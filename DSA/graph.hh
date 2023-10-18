@@ -8,8 +8,12 @@ struct GraphTraits {
     using EdgesItTy = typename GraphTy::EdgesItTy;
 
     static NodeTy entry(GraphTy& G);
-    static EdgesItTy edgeBegin(NodeTy node);
-    static EdgesItTy edgeEnd(NodeTy node);
+
+    static EdgesItTy inEdgeBegin(NodeTy node);
+    static EdgesItTy inEdgeEnd(NodeTy node);
+
+    static EdgesItTy outEdgeBegin(NodeTy node);
+    static EdgesItTy outEdgeEnd(NodeTy node);
 };
 
 } // namespace jade

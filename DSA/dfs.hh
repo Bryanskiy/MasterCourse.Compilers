@@ -24,7 +24,7 @@ public:
     DFSIterator() = default;
 
     DFSIterator(value_type node) {
-        m_stack.push_back(VE(node, Traits::edgeBegin(node)));
+        m_stack.push_back(VE(node, Traits::outEdgeBegin(node)));
         m_visited.insert(node);
     }
 
@@ -54,10 +54,10 @@ private:
             NodeTy currentNode = m_stack.back().first;
             EdgesItTy EdgeIt = m_stack.back().second;
 
-            while(EdgeIt != Traits::edgeEnd(currentNode)) {
+            while(EdgeIt != Traits::outEdgeEnd(currentNode)) {
                 NodeTy nextNode = *EdgeIt;
                 if(m_visited.find(nextNode) == m_visited.end()) {
-                    m_stack.push_back(VE(nextNode, Traits::edgeBegin(nextNode)));
+                    m_stack.push_back(VE(nextNode, Traits::outEdgeBegin(nextNode)));
                     m_visited.insert(nextNode);
                     return;
                 }

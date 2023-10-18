@@ -10,7 +10,7 @@
 namespace jade {
 
 using BasicBlocks = IList<BasicBlock>;
-using BorrowedBBs = IList<BasicBlock, IListBorrower<BasicBlock>>;
+using BasicBlocksRef = IList<BasicBlock, IListBorrower<BasicBlock>>;
 
 class Param : public Value, public IListNode {
 public:
@@ -20,11 +20,11 @@ using Params =  IList<Param>;
 
 class BasicBlocksGraph {
 private:
-    BorrowedBBs m_bbs;
+    BasicBlocksRef m_bbs;
 
 public:
     BasicBlocksGraph() = default;
-    BasicBlocksGraph(BorrowedBBs c) : m_bbs{c} {}
+    BasicBlocksGraph(BasicBlocksRef c) : m_bbs{c} {}
 
     auto nodes() { return Range{m_bbs.begin(), m_bbs.end()}; }
 };
@@ -38,8 +38,11 @@ struct GraphTraits<BasicBlocksGraph> {
         return G.nodes().begin().getPtr();
     }
 
-    static EdgesItTy edgeBegin(NodeTy node) { return node->successors().begin(); }
-    static EdgesItTy edgeEnd(NodeTy node) { return node->successors().end(); }
+    static EdgesItTy outEdgeBegin(NodeTy node) { return node->successors().begin(); }
+    static EdgesItTy outEdgeEnd(NodeTy node) { return node->successors().end(); }
+
+    static EdgesItTy inEdgeBegin(NodeTy node) { return node->predecessors().begin(); }
+    static EdgesItTy inEdgeEnd(NodeTy node) { return node->predecessors().end(); }
 };
 
 class Function {
