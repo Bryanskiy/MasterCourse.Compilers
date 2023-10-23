@@ -211,6 +211,9 @@ public:
         return iterator{node};
     }
 
+    pointer getLast() const { return m_last; }
+    bool empty() const { return begin() == end(); }
+
 private:
     pointer m_last{nullptr};
     pointer m_start{nullptr};

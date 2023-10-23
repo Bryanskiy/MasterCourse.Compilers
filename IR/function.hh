@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <vector>
 
@@ -38,6 +39,8 @@ struct GraphTraits<BasicBlocksGraph> {
         return G.nodes().begin().getPtr();
     }
 
+    static std::size_t id(NodeTy node) { return node->getId(); }
+
     static EdgesItTy outEdgeBegin(NodeTy node) { return node->successors().begin(); }
     static EdgesItTy outEdgeEnd(NodeTy node) { return node->successors().end(); }
 
@@ -48,17 +51,8 @@ struct GraphTraits<BasicBlocksGraph> {
 class Function {
 public:
 
-    BasicBlock* appendBB() {
-        auto* bb = new BasicBlock{};
-        m_bbs.push_back(bb);
-        return bb;
-    }
-
-    Param* appendParam(Type type) {
-        auto* param = new Param{type};
-        m_params.push_back(param);
-        return param;
-    }
+    template<typename T, typename ...Args>
+    T* create(Args&&... args);
 
     auto getBasicBlocks() { return BasicBlocksGraph(m_bbs.borrow()); }
 
@@ -67,5 +61,27 @@ private:
     Params m_params;
     std::size_t m_valCounter{0};
 };
+
+template<typename T, typename ...Args>
+T* Function::create(Args&&... args) { assert(0); }
+
+template<>
+inline BasicBlock* Function::create<BasicBlock>() {
+    auto* bb = new BasicBlock{};
+    std::size_t id = 0;
+    if (!m_bbs.empty()) {
+        id = m_bbs.getLast()->getId() + 1;
+    }
+    bb->setId(id);
+    m_bbs.push_back(bb);
+    return bb;
+}
+
+template<>
+inline Param* Function::create<Param, Type>(Type&& type) {
+    auto* param = new Param{type};
+    m_params.push_back(param);
+    return param;
+}
 
 } // namespace jade

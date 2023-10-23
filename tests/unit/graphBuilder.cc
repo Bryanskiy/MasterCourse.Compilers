@@ -2,6 +2,7 @@
 #include <cstdint>
 
 #include "gtest/gtest.h"
+#include "IR.hh"
 #include "function.hh"
 
 using namespace jade;
@@ -69,12 +70,12 @@ TEST(GraphBuilder, Fib) {
     // TODO: macros for convinient graph generation
 
     auto function = Function{};
-    auto v0 = function.appendParam(Type::I32);
+    auto v0 = function.create<Param>(Type::create<Type::I32>());
 
-    auto bb0 = function.appendBB();
-    auto bb1 = function.appendBB();
-    auto bb2 = function.appendBB();
-    auto bb3 = function.appendBB();
+    auto bb0 = function.create<BasicBlock>();
+    auto bb1 = function.create<BasicBlock>();
+    auto bb2 = function.create<BasicBlock>();
+    auto bb3 = function.create<BasicBlock>();
 
     bb0->addSuccessor(bb1);
 

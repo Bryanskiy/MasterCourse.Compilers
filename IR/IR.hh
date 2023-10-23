@@ -82,6 +82,9 @@ public:
     void removeSuccessor(BasicBlock* succs) { m_succs.remove(succs); }
     void removePredecessor(BasicBlock* pred) { m_preds.remove(pred); }
 
+    void setId(std::size_t id) { m_id = id; }
+    std::size_t getId() const { return m_id; }
+
 private:
     friend InstrBulder;
 
@@ -89,6 +92,8 @@ private:
     std::list<BasicBlock*> m_preds;
     std::list<BasicBlock*> m_succs;
     Function* m_function{nullptr};
+
+    std::size_t m_id;
 };
 
 class InstrBulder final {

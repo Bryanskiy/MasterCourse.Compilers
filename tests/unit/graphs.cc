@@ -7,7 +7,7 @@ Function example1() {
 
     std::array<BasicBlock*, 4> bbs;
     for(std::size_t i = 0; i < bbs.size(); ++i) {
-        bbs[i] = function.appendBB();
+        bbs[i] = function.create<BasicBlock>();
     }
 
     bbs[0]->addSuccessor(bbs[1]);
@@ -23,7 +23,7 @@ Function example2() {
 
     std::array<BasicBlock*, 7> bbs;
     for(std::size_t i = 0; i < bbs.size(); ++i) {
-        bbs[i] = function.appendBB();
+        bbs[i] = function.create<BasicBlock>();
     }
 
     bbs[0]->addSuccessor(bbs[1]);
