@@ -27,19 +27,29 @@ public:
     BasicBlocksGraph() = default;
     BasicBlocksGraph(BasicBlocksRef c) : m_bbs{c} {}
 
-    auto nodes() { return Range{m_bbs.begin(), m_bbs.end()}; }
+    std::size_t size() const { return m_bbs.getLast()->getId(); }
+    auto nodes() const { return Range{m_bbs.begin(), m_bbs.end()}; }
 };
 
 template<>
 struct GraphTraits<BasicBlocksGraph> {
     using NodeTy = BasicBlock*;
     using EdgesItTy = decltype(BasicBlocksGraph().nodes().begin().getPtr()->successors().begin());
+    using NodesIt = decltype(BasicBlocksGraph().nodes().begin());
 
-    static NodeTy entry(BasicBlocksGraph& G) {
+    static NodeTy entry(const BasicBlocksGraph& G) {
         return G.nodes().begin().getPtr();
+    }
+    static NodesIt nodesBegin(BasicBlocksGraph& G) {
+        return G.nodes().begin();
+    }
+
+    static NodesIt nodesEnd(BasicBlocksGraph& G) {
+        return G.nodes().end();
     }
 
     static std::size_t id(NodeTy node) { return node->getId(); }
+    static std::size_t nodesCount(const BasicBlocksGraph& G) { return G.size(); }
 
     static EdgesItTy outEdgeBegin(NodeTy node) { return node->successors().begin(); }
     static EdgesItTy outEdgeEnd(NodeTy node) { return node->successors().end(); }
