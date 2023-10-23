@@ -23,8 +23,14 @@ public:
 
         return false;
     }
-    // vertices dominatedBy(v)
-    // vertices dominate(v)
+
+    auto dominateBegin(NodeTy v) {
+        return m_nodes[v].begin();
+    }
+
+    auto dominateEnd(NodeTy v) {
+        return m_nodes[v].end();
+    }
 private:
     template<typename Ty>
     friend class DominatorTreeBuilder;
@@ -78,15 +84,15 @@ private:
         }
 
         NodeTy find(NodeTy v);
-        void merge(NodeTy lhs, NodeTy rhs) {
-            setParent(lhs, rhs);
+        void merge(NodeTy parent, NodeTy node) {
+            setParent(parent, node);
         }
 
         NodeTy getParent(NodeTy node) {
             return m_dsu[Traits::id(node)];
         }
 
-        void setParent(NodeTy node, NodeTy parent) {
+        void setParent(NodeTy parent, NodeTy node) {
             m_dsu[Traits::id(node)] = parent;
         }
 
@@ -118,11 +124,11 @@ DominatorTreeBuilder<GraphTy>::DSU::find(NodeTy v) {
 
     auto searchRes = find(parentNode);
 
-    if(m_semi[Traits::id(parentNode)] < m_semi[Traits::id(v)]) {
+    if((*m_semi)[Traits::id(parentNode)] < (*m_semi)[Traits::id(v)]) {
         m_labels[Traits::id(v)] = m_labels[Traits::id(parentNode)];
     }
 
-    setParent(v, searchRes);
+    setParent(searchRes, v);
     return m_labels[Traits::id(v)];
 }
 
@@ -148,9 +154,10 @@ void DominatorTreeBuilder<GraphTy>::reset() {
 
 template<typename GraphTy>
 void DominatorTreeBuilder<GraphTy>::initState(GraphTy& G) {
-    m_dfsLabels.resize(Traits::nodesCount(G));
+    m_dfsLabels.reserve(Traits::nodesCount(G));
     m_dfsParents.resize(Traits::nodesCount(G));
     m_sdoms.resize(Traits::nodesCount(G));
+    m_idoms.resize(Traits::nodesCount(G));
     m_bucket.resize(Traits::nodesCount(G));
 
     m_dsu = DSU(&m_sdoms);
@@ -158,20 +165,26 @@ void DominatorTreeBuilder<GraphTy>::initState(GraphTy& G) {
 
 template<typename GraphTy>
 void DominatorTreeBuilder<GraphTy>::computeLabels(GraphTy& G) {
+    if (!Traits::nodesCount(G)) {
+        return;
+    }
+
     auto dfsIt = DFSIterator<GraphTy>::begin(G);
     auto end = DFSIterator<GraphTy>::end(G);
 
+    auto prevNode = *dfsIt;
     while (dfsIt != end) {
-        m_dfsLabels.push_back(*dfsIt);
+        m_dfsParents[Traits::id(*dfsIt)] = prevNode;
 
-        m_sdoms[Traits::id(*dfsIt)] = Traits::id(*dfsIt);
-        m_idoms[Traits::id(*dfsIt)] = Traits::id(*dfsIt);
+        m_sdoms[Traits::id(*dfsIt)] = m_dfsLabels.size();
+        m_idoms[Traits::id(*dfsIt)] = m_dfsLabels.size();
+
+        m_dfsLabels.push_back(*dfsIt);
         m_dsu.setLabel(*dfsIt, *dfsIt);
         m_dsu.setParent(*dfsIt, *dfsIt);
 
-        auto prev = *dfsIt;
+        prevNode = *dfsIt;
         ++dfsIt;
-        m_dfsParents[Traits::id(prev)] = *dfsIt;
     }
 }
 
@@ -183,17 +196,17 @@ void DominatorTreeBuilder<GraphTy>::computeSdoms() {
         auto ancestorIt = Traits::inEdgeBegin(currenNode);
         auto ancestorEnd = Traits::inEdgeEnd(currenNode);
 
-        for(; ancestorIt != ancestorEnd; ++it) {
+        for(; ancestorIt != ancestorEnd; ++ancestorIt) {
             auto ancWithMinSdom = m_dsu.find(*ancestorIt);
-            m_sdoms[Traits::id(*it)] = std::min(m_sdoms[Traits::id(*it)], m_sdoms[Traits::id(ancWithMinSdom)]);
+            m_sdoms[Traits::id(currenNode)] = std::min(m_sdoms[Traits::id(currenNode)], m_sdoms[Traits::id(ancWithMinSdom)]);
 
-            if (it != m_dfsLabels.rbegin()) {
-                m_dsu.merge(m_dfsParents[Traits::id(*it)], *it);
-                m_bucket[m_sdoms[Traits::id(*it)]].push_back(*it);
+            if (currenNode != *m_dfsLabels.begin()) {
+                m_dsu.merge(m_dfsParents[Traits::id(currenNode)], currenNode);
+                m_bucket[m_sdoms[Traits::id(currenNode)]].push_back(currenNode);
             }
         }
 
-        for(auto&& dominatee : m_bucket[m_sdoms[Traits::id(*it)]]) {
+        for(auto&& dominatee : m_bucket[Traits::id(currenNode)]) {
             auto minSdom = m_dsu.find(dominatee);
             if (m_sdoms[Traits::id(minSdom)] == m_sdoms[Traits::id(dominatee)]) {
                 m_idoms[Traits::id(dominatee)] = m_sdoms[Traits::id(dominatee)];

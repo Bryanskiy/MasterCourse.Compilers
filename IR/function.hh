@@ -27,7 +27,7 @@ public:
     BasicBlocksGraph() = default;
     BasicBlocksGraph(BasicBlocksRef c) : m_bbs{c} {}
 
-    std::size_t size() const { return m_bbs.getLast()->getId(); }
+    std::size_t size() const { return m_bbs.getLast()->getId() + 1; }
     auto nodes() const { return Range{m_bbs.begin(), m_bbs.end()}; }
 };
 

@@ -76,14 +76,22 @@ public:
     auto successors() { return Range(m_succs.begin(), m_succs.end()); }
     auto predecessors() { return Range(m_preds.begin(), m_preds.end()); }
 
-    void addSuccessor(BasicBlock* succs) { m_succs.push_back(succs); }
-    void addPredecessor(BasicBlock* pred) { m_preds.push_back(pred); }
+    void addSuccessor(BasicBlock* succs) {
+        succs->addPredecessor(this);
+        m_succs.push_back(succs);
+    }
 
-    void removeSuccessor(BasicBlock* succs) { m_succs.remove(succs); }
-    void removePredecessor(BasicBlock* pred) { m_preds.remove(pred); }
+    void removeSuccessor(BasicBlock* succs) {
+        succs->removePredecessor(this);
+        m_succs.remove(succs);
+    }
 
     void setId(std::size_t id) { m_id = id; }
-    std::size_t getId() const { return m_id; }
+    std::size_t getId() { return m_id; }
+
+private:
+    void addPredecessor(BasicBlock* pred) { m_preds.push_back(pred); }
+    void removePredecessor(BasicBlock* pred) { m_preds.remove(pred); }
 
 private:
     friend InstrBulder;

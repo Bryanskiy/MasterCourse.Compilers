@@ -3,9 +3,6 @@
 #include "IR.hh"
 #include "function.hh"
 
-// ok in tests
-using namespace jade;
-
 //                 +-----+
 //                 |  0  |
 //                 +-----+
@@ -19,7 +16,7 @@ using namespace jade;
 //          |      +-----+
 //          -------|  3  |
 //                 +-----+
-Function example1();
+jade::Function example1();
 
 //                 +-----+
 //                 |  0  |
@@ -40,4 +37,4 @@ Function example1();
 //        +->|  5  |<----|  6  |<-+
 //           +-----+     +-----+
 //
-Function example2();
+jade::Function example2();

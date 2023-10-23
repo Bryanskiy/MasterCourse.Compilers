@@ -77,16 +77,16 @@ TEST(GraphBuilder, Fib) {
     auto bb2 = function.create<BasicBlock>();
     auto bb3 = function.create<BasicBlock>();
 
-    bb0->addSuccessor(bb1);
+    {
+        ASSERT_EQ(bb0->getId(), 0);
+        ASSERT_EQ(bb1->getId(), 1);
+        ASSERT_EQ(bb2->getId(), 2);
+        ASSERT_EQ(bb3->getId(), 3);
+    }
 
+    bb0->addSuccessor(bb1);
     bb1->addSuccessor(bb2);
     bb1->addSuccessor(bb3);
-    bb1->addPredecessor(bb0);
-    bb1->addPredecessor(bb3);
-
-    bb2->addPredecessor(bb1);
-
-    bb3->addPredecessor(bb1);
     bb3->addSuccessor(bb1);
 
     {

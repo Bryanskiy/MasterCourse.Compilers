@@ -11,7 +11,17 @@ TEST(DomTree, Check) {
 }
 
 TEST(DomTree, fst) {
-    auto graph  = example2().getBasicBlocks();
+    auto function = example2();
+    auto graph  = function.getBasicBlocks();
     auto builder = DominatorTreeBuilder<BasicBlocksGraph>();
     auto domTree = builder.build(graph);
+
+    auto range = graph.nodes();
+
+    std::vector<BasicBlock*> bbs;
+    for(auto it = range.begin(); it != range.end(); ++it) {
+        bbs.push_back(&*it);
+    }
+
+    ASSERT_EQ(, val2);
 }

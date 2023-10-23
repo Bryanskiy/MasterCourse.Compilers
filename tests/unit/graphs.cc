@@ -2,6 +2,8 @@
 #include "IR.hh"
 #include <array>
 
+using namespace jade;
+
 Function example1() {
     auto function = Function{};
 
