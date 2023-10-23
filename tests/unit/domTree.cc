@@ -23,5 +23,5 @@ TEST(DomTree, fst) {
         bbs.push_back(&*it);
     }
 
-    ASSERT_EQ(, val2);
+    ASSERT_EQ(domTree.dominate(bbs[0], bbs[1]), true);
 }

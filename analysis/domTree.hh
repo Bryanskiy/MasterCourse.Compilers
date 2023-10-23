@@ -18,7 +18,8 @@ public:
     bool dominate(NodeTy lhs, NodeTy rhs) {
         auto dominated = m_nodes.find(lhs);
         if (dominated != m_nodes.end()) {
-            return std::find(dominated->begin(), dominated->end(), rhs) != dominated->end();
+            auto vec = (*dominated).second;
+            return std::find(vec.begin(), vec.end(), rhs) != vec.end();
         }
 
         return false;
