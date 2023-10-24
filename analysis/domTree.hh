@@ -12,31 +12,38 @@ namespace jade {
 template<typename GraphTy>
 class DominatorTreeBuilder;
 
-template<typename NodeTy>
+template<typename GraphTy>
 class DomTree {
 public:
-    bool dominate(NodeTy lhs, NodeTy rhs) {
-        auto dominated = m_nodes.find(lhs);
-        if (dominated != m_nodes.end()) {
-            auto vec = (*dominated).second;
-            return std::find(vec.begin(), vec.end(), rhs) != vec.end();
-        }
+    using Traits = GraphTraits<GraphTy>;
+    using NodeTy = typename Traits::NodeTy;
 
-        return false;
+    bool dominate(NodeTy lhs, NodeTy rhs) {
+        auto&& data = m_tree[Traits::id(lhs)].dominate;
+        return std::find(data.begin(), data.end(), rhs) != data.end();
     }
 
     auto dominateBegin(NodeTy v) {
-        return m_nodes[v].begin();
+        return m_tree[Traits::id(v)].dominate.begin();
     }
 
     auto dominateEnd(NodeTy v) {
-        return m_nodes[v].end();
+        return m_tree[Traits::id(v)].dominate.end();
     }
-private:
-    template<typename Ty>
-    friend class DominatorTreeBuilder;
 
-    std::unordered_map<NodeTy, std::vector<NodeTy>> m_nodes;
+private:
+    friend DominatorTreeBuilder<GraphTy>;
+
+    void resize(std::size_t n) {
+        m_tree.resize(n);
+    }
+
+    struct DomTreeNode {
+        NodeTy idom;
+        std::vector<NodeTy> dominate;
+    };
+
+    std::vector<DomTreeNode> m_tree;
 };
 
 template<typename NodeTy>
@@ -52,19 +59,20 @@ public:
     using Traits = GraphTraits<GraphTy>;
     using NodeTy = typename Traits::NodeTy;
     using EdgesItTy = typename Traits::EdgesItTy;
-    using DomTreeTy = DomTree<NodeTy>;
+    using DomTreeTy = DomTree<GraphTy>;
 
     DomTreeTy build(GraphTy& G);
 
 private:
     void reset();
     void initState(GraphTy& G);
-    void computeLabels(GraphTy& G);
+    void computeLabels(NodeTy node);
     void computeSdoms();
     void computeIdoms();
 
 private:
     std::vector<NodeTy> m_dfsLabels;
+    std::set<std::size_t> m_visited;
     // parent of node i in dfs tree
     std::vector<NodeTy> m_dfsParents;
     // label of semi-dominator of the i’th node
@@ -77,14 +85,19 @@ private:
     DomTreeTy m_domTree;
     class DSU {
     public:
-        DSU(const std::vector<size_t>* semi) : m_semi(semi) {
-            if (m_semi) {
-                m_dsu.resize(m_semi->size());
-                m_labels.resize(m_semi->size());
+        DSU() = default;
+        DSU(GraphTy& G) {
+            m_dsu.resize(Traits::nodesCount(G));
+            m_labels.resize(Traits::nodesCount(G));
+
+            auto it = Traits::nodesBegin(G);
+            for(; it != Traits::nodesEnd(G); ++it) {
+                m_dsu[Traits::id(&*it)] = &*it;
+                m_labels[Traits::id(&*it)] = &*it;
             }
         }
 
-        NodeTy find(NodeTy v);
+        NodeTy find(const std::vector<std::size_t>& semi, NodeTy v);
         void merge(NodeTy parent, NodeTy node) {
             setParent(parent, node);
         }
@@ -110,22 +123,20 @@ private:
         // m_labels[i] stores the vertex v with minimum sdom,
         // lying on path from i to the dsu root.
         std::vector<NodeTy> m_labels;
-
-        const std::vector<std::size_t>* m_semi{nullptr};
-    } m_dsu{nullptr};
+    } m_dsu;
 };
 
 template<typename GraphTy>
 typename DominatorTreeBuilder<GraphTy>::NodeTy
-DominatorTreeBuilder<GraphTy>::DSU::find(NodeTy v) {
+DominatorTreeBuilder<GraphTy>::DSU::find(const std::vector<std::size_t>& semi, NodeTy v) {
     auto parentNode = getParent(v);
-    if (getParent(v) == v) {
+    if (parentNode == v) {
         return v;
     }
 
-    auto searchRes = find(parentNode);
+    auto searchRes = find(semi, parentNode);
 
-    if((*m_semi)[Traits::id(parentNode)] < (*m_semi)[Traits::id(v)]) {
+    if(semi[Traits::id(parentNode)] < semi[Traits::id(v)]) {
         m_labels[Traits::id(v)] = m_labels[Traits::id(parentNode)];
     }
 
@@ -138,7 +149,7 @@ typename DominatorTreeBuilder<GraphTy>::DomTreeTy
 DominatorTreeBuilder<GraphTy>::build(GraphTy& G) {
     reset();
     initState(G);
-    computeLabels(G);
+    computeLabels(Traits::entry(G));
     computeSdoms();
     computeIdoms();
 
@@ -160,32 +171,29 @@ void DominatorTreeBuilder<GraphTy>::initState(GraphTy& G) {
     m_sdoms.resize(Traits::nodesCount(G));
     m_idoms.resize(Traits::nodesCount(G));
     m_bucket.resize(Traits::nodesCount(G));
+    m_domTree.resize(Traits::nodesCount(G));
 
-    m_dsu = DSU(&m_sdoms);
+    m_dsu = DSU(G);
 }
 
 template<typename GraphTy>
-void DominatorTreeBuilder<GraphTy>::computeLabels(GraphTy& G) {
-    if (!Traits::nodesCount(G)) {
-        return;
+void DominatorTreeBuilder<GraphTy>::computeLabels(NodeTy node) {
+    auto counter = m_dfsLabels.size();
+    if (counter == 0) {
+        m_dfsParents[Traits::id(node)] = node;
     }
 
-    auto dfsIt = DFSIterator<GraphTy>::begin(G);
-    auto end = DFSIterator<GraphTy>::end(G);
+    m_dfsLabels.push_back(node);
+    m_visited.insert(Traits::id(node));
+    m_sdoms[Traits::id(node)] = counter;
+    m_idoms[Traits::id(node)] = counter;
 
-    auto prevNode = *dfsIt;
-    while (dfsIt != end) {
-        m_dfsParents[Traits::id(*dfsIt)] = prevNode;
-
-        m_sdoms[Traits::id(*dfsIt)] = m_dfsLabels.size();
-        m_idoms[Traits::id(*dfsIt)] = m_dfsLabels.size();
-
-        m_dfsLabels.push_back(*dfsIt);
-        m_dsu.setLabel(*dfsIt, *dfsIt);
-        m_dsu.setParent(*dfsIt, *dfsIt);
-
-        prevNode = *dfsIt;
-        ++dfsIt;
+    auto it = Traits::outEdgeBegin(node);
+    for(; it != Traits::outEdgeEnd(node); ++it) {
+        if (!m_visited.count(Traits::id(*it))) {
+            m_dfsParents[Traits::id(*it)] = node;
+            computeLabels(*it);
+        }
     }
 }
 
@@ -198,7 +206,7 @@ void DominatorTreeBuilder<GraphTy>::computeSdoms() {
         auto ancestorEnd = Traits::inEdgeEnd(currenNode);
 
         for(; ancestorIt != ancestorEnd; ++ancestorIt) {
-            auto ancWithMinSdom = m_dsu.find(*ancestorIt);
+            auto ancWithMinSdom = m_dsu.find(m_sdoms, *ancestorIt);
             m_sdoms[Traits::id(currenNode)] = std::min(m_sdoms[Traits::id(currenNode)], m_sdoms[Traits::id(ancWithMinSdom)]);
 
             if (currenNode != *m_dfsLabels.begin()) {
@@ -208,7 +216,7 @@ void DominatorTreeBuilder<GraphTy>::computeSdoms() {
         }
 
         for(auto&& dominatee : m_bucket[Traits::id(currenNode)]) {
-            auto minSdom = m_dsu.find(dominatee);
+            auto minSdom = m_dsu.find(m_sdoms, dominatee);
             if (m_sdoms[Traits::id(minSdom)] == m_sdoms[Traits::id(dominatee)]) {
                 m_idoms[Traits::id(dominatee)] = m_sdoms[Traits::id(dominatee)];
             } else {
@@ -226,7 +234,8 @@ void DominatorTreeBuilder<GraphTy>::computeIdoms() {
         }
 
         auto immNode = m_dfsLabels[m_idoms[Traits::id(node)]];
-        m_domTree.m_nodes[immNode].push_back(node);
+        m_domTree.m_tree[Traits::id(node)].idom = immNode;
+        m_domTree.m_tree[Traits::id(immNode)].dominate.push_back(node);
     }
 }
 
