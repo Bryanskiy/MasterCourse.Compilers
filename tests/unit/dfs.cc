@@ -75,8 +75,8 @@ TEST(Dfs, example3) {
     ASSERT_EQ(*(++dfs), bbs[4]);
     ASSERT_EQ(*(++dfs), bbs[5]);
     ASSERT_EQ(*(++dfs), bbs[6]);
-    ASSERT_EQ(*(++dfs), bbs[8]);
     ASSERT_EQ(*(++dfs), bbs[7]);
+    ASSERT_EQ(*(++dfs), bbs[8]);
     ASSERT_EQ(*(++dfs), bbs[9]);
     ASSERT_EQ(*(++dfs), bbs[10]);
     ASSERT_EQ((++dfs), DFSIterator<BasicBlocksGraph>::end(graph));
