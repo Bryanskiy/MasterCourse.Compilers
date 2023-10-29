@@ -89,15 +89,19 @@ private:
     void reset();
     void initState(GraphTy& G);
     void computeLabels(NodeTy node);
-    void computeSdoms();
+
+    class DSU;
+    void computeSdoms(DSU& dsu);
     void computeIdoms();
 
 private:
-    std::unordered_map<std::size_t, std::size_t> m_dfsLabels;
+    using IndexMap = std::unordered_map<std::size_t, std::size_t>;
+
+    IndexMap m_dfsLabels;
     std::vector<NodeTy> m_dfsNodes;
     std::set<std::size_t> m_visited;
     // parent of node i in dfs tree
-    std::unordered_map<std::size_t, std::size_t> m_dfsParents;
+    IndexMap m_dfsParents;
     // label of semi-dominator of the i’th node
     std::vector<std::size_t> m_sdoms;
     // label of immediate-dominator of the i’th node
@@ -108,63 +112,71 @@ private:
     DomTreeTy m_domTree;
     class DSU {
     public:
-        DSU() = default;
-        DSU(GraphTy& G) {
-            m_dsu.resize(Traits::nodesCount(G));
-            m_labels.resize(Traits::nodesCount(G));
-
-            auto it = Traits::nodesBegin(G);
-            for(; it != Traits::nodesEnd(G); ++it) {
-                m_dsu[Traits::id(&*it)] = &*it;
-                m_labels[Traits::id(&*it)] = &*it;
+        DSU(const IndexMap& dfsLabels, const std::vector<std::size_t>& sdoms, const std::vector<NodeTy>& dfsNodes) :
+            m_dfsLabels{dfsLabels}, m_sdoms{sdoms} {
+                m_dsu = dfsNodes;
+                m_labels = dfsNodes;
             }
-        }
 
-        NodeTy find(const std::vector<std::size_t>& semi, NodeTy v);
+        NodeTy find(NodeTy v);
         void merge(NodeTy parent, NodeTy node) {
             setParent(parent, node);
         }
 
         NodeTy getParent(NodeTy node) {
-            return m_dsu[Traits::id(node)];
+            return m_dsu[m_dfsLabels.at(Traits::id(node))];
         }
 
         void setParent(NodeTy parent, NodeTy node) {
-            m_dsu[Traits::id(node)] = parent;
+            m_dsu[m_dfsLabels.at(Traits::id(node))] = parent;
         }
 
         NodeTy getLabel(NodeTy node) {
-            return m_labels[Traits::id(node)];
+            return m_labels[m_dfsLabels.at(Traits::id(node))];
         }
 
         void setLabel(NodeTy node, NodeTy parent) {
-            m_labels[Traits::id(node)] = parent;
+            m_labels[m_dfsLabels.at(Traits::id(node))] = parent;
+        }
+
+        std::size_t getSemi(NodeTy node) {
+            return m_sdoms[m_dfsLabels.at(Traits::id(node))];
         }
 
     private:
+        void compress(NodeTy node);
+    private:
+        const IndexMap& m_dfsLabels;
+        const std::vector<std::size_t>& m_sdoms;
+
         std::vector<NodeTy> m_dsu;
         // m_labels[i] stores the vertex v with minimum sdom,
         // lying on path from i to the dsu root.
         std::vector<NodeTy> m_labels;
-    } m_dsu;
+    };
 };
 
 template<typename GraphTy>
 typename DominatorTreeBuilder<GraphTy>::NodeTy
-DominatorTreeBuilder<GraphTy>::DSU::find(const std::vector<std::size_t>& semi, NodeTy v) {
-    auto parentNode = getParent(v);
-    if (parentNode == v) {
-        return v;
+DominatorTreeBuilder<GraphTy>::DSU::find(NodeTy v) {
+    compress(v);
+    return getLabel(v);
+}
+
+template<typename GraphTy>
+void DominatorTreeBuilder<GraphTy>::DSU::compress(NodeTy node) {
+    auto parentNode = getParent(node);
+    if (parentNode == node) {
+        return;
     }
 
-    auto searchRes = find(semi, parentNode);
+    compress(parentNode);
 
-    if(semi[Traits::id(parentNode)] < semi[Traits::id(v)]) {
-        m_labels[Traits::id(v)] = m_labels[Traits::id(parentNode)];
+    setParent(getParent(parentNode), node);
+
+    if(getSemi(parentNode) < getSemi(node)) {
+        setLabel(node, getParent(node));
     }
-
-    setParent(searchRes, v);
-    return m_labels[Traits::id(v)];
 }
 
 template<typename GraphTy>
@@ -173,7 +185,8 @@ DominatorTreeBuilder<GraphTy>::build(GraphTy& G) {
     reset();
     initState(G);
     computeLabels(Traits::entry(G));
-    computeSdoms();
+    auto dsu = DSU(m_dfsLabels, m_sdoms, m_dfsNodes);
+    computeSdoms(dsu);
     computeIdoms();
 
     return m_domTree;
@@ -196,8 +209,6 @@ void DominatorTreeBuilder<GraphTy>::initState(GraphTy& G) {
     m_bucket.resize(Traits::nodesCount(G));
 
     m_dfsParents[Traits::id(Traits::entry(G))] = 0;
-
-    m_dsu = DSU(G);
 }
 
 template<typename GraphTy>
@@ -221,7 +232,7 @@ void DominatorTreeBuilder<GraphTy>::computeLabels(NodeTy node) {
 }
 
 template<typename GraphTy>
-void DominatorTreeBuilder<GraphTy>::computeSdoms() {
+void DominatorTreeBuilder<GraphTy>::computeSdoms(DSU& dsu) {
     std::size_t currentIdx = m_dfsNodes.size() - 1;
     for(auto it = m_dfsNodes.rbegin(); it != m_dfsNodes.rend(); ++it, --currentIdx) {
         auto currenNode = *it;
@@ -230,18 +241,17 @@ void DominatorTreeBuilder<GraphTy>::computeSdoms() {
         auto ancestorEnd = Traits::inEdgeEnd(currenNode);
 
         for(; ancestorIt != ancestorEnd; ++ancestorIt) {
-            auto ancWithMinSdom = m_dsu.find(m_sdoms, *ancestorIt);
+            auto ancWithMinSdom = dsu.find(*ancestorIt);
             auto ancWithMinSdomIdx = m_dfsLabels[Traits::id(ancWithMinSdom)];
 
             m_sdoms[currentIdx] = std::min(m_sdoms[currentIdx], m_sdoms[ancWithMinSdomIdx]);
             if (*it != *m_dfsNodes.begin()) {
-                m_dsu.merge(m_dfsNodes[m_dfsParents[Traits::id(currenNode)]], currenNode);
                 m_bucket[m_sdoms[currentIdx]].push_back(currentIdx);
             }
         }
 
         for(auto&& dominateeIdx : m_bucket[currentIdx]) {
-            auto minSdom = m_dsu.find(m_sdoms, m_dfsNodes[dominateeIdx]);
+            auto minSdom = dsu.find(m_dfsNodes[dominateeIdx]);
             auto minSdomIdx = m_dfsLabels[Traits::id(minSdom)];
 
             if (m_sdoms[minSdomIdx] == m_sdoms[dominateeIdx]) {
@@ -249,6 +259,10 @@ void DominatorTreeBuilder<GraphTy>::computeSdoms() {
             } else {
                 m_idoms[dominateeIdx] = minSdomIdx;
             }
+        }
+
+        if (*it != *m_dfsNodes.begin()) {
+            dsu.merge(m_dfsNodes[m_dfsParents[Traits::id(currenNode)]], currenNode);
         }
     }
 }

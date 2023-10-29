@@ -84,7 +84,6 @@ Function example4() {
     bbs[1]->addSuccessor(bbs[2]);
     bbs[2]->addSuccessor(bbs[3]);
     bbs[3]->addSuccessor(bbs[4]);
-    bbs[3]->addSuccessor(bbs[5]);
     bbs[4]->addSuccessor(bbs[5]);
     bbs[4]->addSuccessor(bbs[2]);
     bbs[1]->addSuccessor(bbs[8]);
@@ -94,6 +93,20 @@ Function example4() {
     bbs[6]->addSuccessor(bbs[4]);
     bbs[8]->addSuccessor(bbs[3]);
     bbs[7]->addSuccessor(bbs[1]);
+
+    // bbs[0]->addSuccessor(bbs[1]);
+    // bbs[1]->addSuccessor(bbs[2]);
+    // bbs[2]->addSuccessor(bbs[3]);
+    // bbs[3]->addSuccessor(bbs[4]);
+    // bbs[4]->addSuccessor(bbs[5]);
+    // bbs[4]->addSuccessor(bbs[2]);
+    // bbs[1]->addSuccessor(bbs[6]);
+    // bbs[6]->addSuccessor(bbs[7]);
+    // bbs[7]->addSuccessor(bbs[8]);
+    // bbs[8]->addSuccessor(bbs[5]);
+    // bbs[8]->addSuccessor(bbs[4]);
+    // bbs[6]->addSuccessor(bbs[3]);
+    // bbs[7]->addSuccessor(bbs[1]);
 
     return function;
 }

@@ -244,3 +244,117 @@ TEST(DomTree, example3) {
         check(bb10N.begin(), bb10N.end(), bbs[10], false);
     }
 }
+
+TEST(DomTree, example4) {
+    auto function = example4();
+    auto graph  = function.getBasicBlocks();
+    auto builder = DominatorTreeBuilder<BasicBlocksGraph>();
+    auto domTree = builder.build(graph);
+    domTree.dump(std::cout);
+
+    auto range = graph.nodes();
+
+    std::vector<BasicBlock*> bbs;
+    for(auto it = range.begin(); it != range.end(); ++it) {
+        bbs.push_back(&*it);
+    }
+
+    auto check = [&domTree](auto begin, auto end, BasicBlock* bb, bool mode) {
+        for(; begin != end; ++begin) {
+            ASSERT_EQ(domTree.dominate(bb, *begin), mode);
+        }
+    };
+
+    {
+        std::array bb0 = {
+            bbs[0], bbs[1], bbs[2], bbs[3], bbs[4], bbs[5],
+            bbs[6], bbs[7], bbs[8]
+        };
+
+        check(bb0.begin(), bb0.end(), bbs[0], true);
+    }
+
+    {
+        std::array bb1 = {
+            bbs[1], bbs[2], bbs[3], bbs[4], bbs[5], bbs[6], bbs[7],
+            bbs[8]
+        };
+
+        check(bb1.begin(), bb1.end(), bbs[1], true);
+    }
+
+    {
+        std::array bb2N = {
+            bbs[3], bbs[4], bbs[5], bbs[6], bbs[7],
+            bbs[8], bbs[0], bbs[1]
+        };
+
+        check(bb2N.begin(), bb2N.end(), bbs[2], false);
+    }
+
+    {
+        std::array bb3N = {
+            bbs[2], bbs[4], bbs[5], bbs[6], bbs[7],
+            bbs[8], bbs[0], bbs[1]
+        };
+
+        check(bb3N.begin(), bb3N.end(), bbs[3], false);
+    }
+
+    {
+        std::array bb4N = {
+            bbs[2], bbs[3], bbs[5], bbs[6], bbs[7],
+            bbs[8], bbs[0], bbs[1]
+        };
+
+        check(bb4N.begin(), bb4N.end(), bbs[4], false);
+    }
+
+    {
+        std::array bb5N = {
+            bbs[2], bbs[3], bbs[4], bbs[6], bbs[7],
+            bbs[8], bbs[0], bbs[1]
+        };
+
+        check(bb5N.begin(), bb5N.end(), bbs[5], false);
+    }
+
+    {
+        std::array bb6N = {
+            bbs[2], bbs[3], bbs[4], bbs[5], bbs[7],
+            bbs[8], bbs[0], bbs[1]
+        };
+
+        check(bb6N.begin(), bb6N.end(), bbs[6], false);
+    }
+
+    {
+        std::array bb7 = {
+            bbs[6], bbs[7],
+        };
+
+        check(bb7.begin(), bb7.end(), bbs[7], true);
+
+        std::array bb7N = {
+            bbs[2], bbs[3], bbs[4], bbs[5],
+            bbs[0], bbs[1], bbs[8]
+        };
+
+        check(bb7N.begin(), bb7N.end(), bbs[7], false);
+    }
+
+    {
+        std::array bb8 = {
+            bbs[6], bbs[7], bbs[8]
+        };
+
+        check(bb8.begin(), bb8.end(), bbs[8], true);
+
+        std::array bb8N = {
+            bbs[2], bbs[3], bbs[4], bbs[5],
+            bbs[0], bbs[1]
+        };
+
+        check(bb8N.begin(), bb8N.end(), bbs[8], false);
+    }
+}
