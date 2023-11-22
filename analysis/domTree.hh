@@ -1,13 +1,13 @@
 #pragma once
 
-#include "graph.hh"
-#include "dfs.hh"
 #include <algorithm>
 #include <cstddef>
 #include <ostream>
 #include <set>
 #include <unordered_map>
 #include <vector>
+
+#include "graph.hh"
 
 namespace jade {
 
@@ -51,12 +51,6 @@ public:
                 stream << "        "  << Traits::id(dominatee) << std::endl;
             }
         }
-    }
-
-    auto dominateBegin(NodeTy v) {
-    }
-
-    auto dominateEnd(NodeTy v) {
     }
 
 private:

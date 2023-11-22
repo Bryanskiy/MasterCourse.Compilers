@@ -1,6 +1,5 @@
 #include "gtest/gtest.h"
 #include <vector>
-#include "dfs.hh"
 #include "graphs.hh"
 #include "function.hh"
 
@@ -104,4 +103,43 @@ TEST(Dfs, example4) {
     ASSERT_EQ(*(++dfs), bbs[7]);
     ASSERT_EQ(*(++dfs), bbs[6]);
     ASSERT_EQ((++dfs), DFSIterator<BasicBlocksGraph>::end(graph));
+}
+
+TEST(PO, example1) {
+    auto function = example1();
+    auto graph = function.getBasicBlocks();
+    auto range = graph.nodes();
+
+    std::vector<BasicBlock*> bbs;
+    for(auto it = range.begin(); it != range.end(); ++it) {
+        bbs.push_back(&*it);
+    }
+
+    auto po = PostOrderIterator<BasicBlocksGraph>::begin(graph);
+    ASSERT_EQ(*po, bbs[2]);
+    ASSERT_EQ(*(++po), bbs[3]);
+    ASSERT_EQ(*(++po), bbs[1]);
+    ASSERT_EQ(*(++po), bbs[0]);
+    ASSERT_EQ((++po), PostOrderIterator<BasicBlocksGraph>::end(graph));
+}
+
+TEST(PO, example2) {
+    auto function = example2();
+    auto graph = function.getBasicBlocks();
+    auto range = graph.nodes();
+
+    std::vector<BasicBlock*> bbs;
+    for(auto it = range.begin(); it != range.end(); ++it) {
+        bbs.push_back(&*it);
+    }
+
+    auto po = PostOrderIterator<BasicBlocksGraph>::begin(graph);
+    ASSERT_EQ(*po, bbs[5]);
+    ASSERT_EQ(*(++po), bbs[2]);
+    ASSERT_EQ(*(++po), bbs[3]);
+    ASSERT_EQ(*(++po), bbs[6]);
+    ASSERT_EQ(*(++po), bbs[4]);
+    ASSERT_EQ(*(++po), bbs[1]);
+    ASSERT_EQ(*(++po), bbs[0]);
+    ASSERT_EQ((++po), PostOrderIterator<BasicBlocksGraph>::end(graph));
 }

@@ -2,7 +2,6 @@
 #include <array>
 #include <iostream>
 #include "IR.hh"
-#include "dfs.hh"
 #include "function.hh"
 #include "domTree.hh"
 #include "graphs.hh"
@@ -250,7 +249,6 @@ TEST(DomTree, example4) {
     auto graph  = function.getBasicBlocks();
     auto builder = DominatorTreeBuilder<BasicBlocksGraph>();
     auto domTree = builder.build(graph);
-    domTree.dump(std::cout);
 
     auto range = graph.nodes();
 

@@ -2,7 +2,7 @@ find_package(GTest REQUIRED)
 
 set(TESTS
     graphBuilder.cc
-    dfs.cc
+    traversal.cc
     domTree.cc
     graphs.cc
 )
