@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstddef>
 #include <set>
 #include <vector>
@@ -27,20 +28,24 @@ struct GraphTraits {
     static EdgesItTy outEdgeEnd(NodeTy node);
 };
 
+#define ITER_GRAPH_TRAITS(GraphTy)                         \
+    using Traits = GraphTraits<GraphTy>;                   \
+                                                           \
+    using iterator_category = std::forward_iterator_tag;   \
+    using value_type = typename Traits::NodeTy;            \
+    using difference_type = std::ptrdiff_t;                \
+    using pointer = value_type*;                           \
+    using reference = value_type&;                         \
+                                                           \
+    using NodeTy = value_type;                             \
+    using EdgesItTy = typename Traits::EdgesItTy;          \
+
+
 template<typename GraphTy>
 class DFSIterator {
 public:
-    using Traits = GraphTraits<GraphTy>;
+    ITER_GRAPH_TRAITS(GraphTy)
 
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = typename Traits::NodeTy;
-    using difference_type = std::ptrdiff_t;
-    using pointer = value_type*;
-    using reference = value_type&;
-
-    using NodeTy = value_type;
-    using EdgesItTy = typename Traits::EdgesItTy;
-public:
     DFSIterator() = default;
 
     DFSIterator(value_type node) {
@@ -97,17 +102,7 @@ private:
 template<typename GraphTy>
 class PostOrderIterator {
 public:
-    using Traits = GraphTraits<GraphTy>;
-
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = typename Traits::NodeTy;
-    using difference_type = std::ptrdiff_t;
-    using pointer = value_type*;
-    using reference = value_type&;
-
-    using NodeTy = value_type;
-    using EdgesItTy = typename Traits::EdgesItTy;
-public:
+    ITER_GRAPH_TRAITS(GraphTy)
     PostOrderIterator() = default;
 
     PostOrderIterator(value_type node) {
@@ -122,6 +117,16 @@ public:
         auto it = PostOrderIterator{};
         it.m_counter = Traits::nodesCount(G);
         return it;
+    }
+
+    static std::vector<NodeTy> collect(GraphTy& G) {
+        auto po = begin(G);
+        return po.m_order;
+    }
+
+    static std::vector<NodeTy> collect(value_type node) {
+        auto po = PostOrderIterator{node};
+        return po.m_order;
     }
 
     // Accessors
@@ -155,6 +160,47 @@ private:
 
         m_order.push_back(node);
     }
+};
+
+template<typename GraphTy>
+class RPOIterator {
+public:
+    ITER_GRAPH_TRAITS(GraphTy)
+
+    RPOIterator() = default;
+
+    RPOIterator(value_type node) {
+        m_po = PostOrderIterator<GraphTy>::collect(node);
+        m_counter = m_po.size();
+    }
+
+    static RPOIterator begin(GraphTy& G) {
+        return RPOIterator{Traits::entry(G)};
+    }
+    static RPOIterator end(GraphTy& G) {
+        auto rpo = RPOIterator();
+        return rpo;
+    }
+
+    // Accessors
+    reference operator*() { return m_po[m_counter - 1]; }
+    pointer operator->() { return &*this; }
+
+    // Comparison operators
+    bool operator==(const RPOIterator &x) const {
+        return (m_counter == x.m_counter);
+    }
+    bool operator!=(const RPOIterator &x) const { return !(*this == x); }
+
+    // Increment operators
+    RPOIterator& operator++() {
+        --m_counter;
+        return *this;
+    }
+
+private:
+    std::vector<NodeTy> m_po;
+    std::size_t m_counter{0};
 };
 
 } // namespace jade
