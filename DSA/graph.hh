@@ -7,6 +7,12 @@
 
 namespace jade {
 
+enum class Gcolor {
+    WHITE,
+    BLACK,
+    GRAY,
+};
+
 template <typename GraphTy>
 struct GraphTraits {
     using NodeTy = typename GraphTy::NodeTy;

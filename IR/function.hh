@@ -3,6 +3,7 @@
 #include <cassert>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include "IR.hh"
 #include "ilist.hh"
@@ -22,6 +23,7 @@ using Params =  IList<Param>;
 class BasicBlocksGraph {
 private:
     BasicBlocksRef m_bbs;
+    std::unordered_map<BasicBlock*, Gcolor> m_colors;
 
 public:
     BasicBlocksGraph() = default;
