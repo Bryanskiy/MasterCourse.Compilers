@@ -5,6 +5,7 @@ set(TESTS
     traversal.cc
     domTree.cc
     graphs.cc
+    loopTree.cc
 )
 
 add_executable(tests ${TESTS})
