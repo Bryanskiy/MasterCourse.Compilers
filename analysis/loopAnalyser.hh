@@ -5,6 +5,7 @@
 #include <ostream>
 #include <iostream>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace jade {
@@ -27,13 +28,33 @@ public:
     NodeTy getHeader() const { return m_header; }
     bool isReducible() const { return m_isReducible; }
 
-    void dump(std::ostream& out) {
+    void dump(std::ostream& out) const {
         dumpInner(out, "");
+    }
+
+    auto backEdgesBegin() const {
+        return m_backEdges.begin();
+    }
+
+    auto backEdgesEnd() const {
+        return m_backEdges.end();
+    }
+
+    auto getBackEdges() const {
+        return m_backEdges;
+    }
+
+    auto getNodes() const {
+        return m_nodes;
+    }
+
+    auto getInners() const {
+        return m_inners;
     }
 private:
 
     void insertInnerLoop(LoopTreeNode* node) {
-        m_inners.push_back(node);
+        m_inners.insert(node);
     }
 
     void setOuter(LoopTreeNode* node) {
@@ -41,50 +62,42 @@ private:
     }
 
     void addBackEdge(NodeTy node) {
-        m_nodes.push_back(node);
-        m_backEdges.push_back(node);
+        m_nodes.insert(node);
+        m_backEdges.insert(node);
     }
 
     void insertNode(NodeTy node) {
-        m_nodes.push_back(node);
-    }
-
-    auto backEdgesBegin() {
-        return m_backEdges.begin();
-    }
-
-    auto backEdgesEnd() {
-        return m_backEdges.end();
+        m_nodes.insert(node);
     }
 
     void addReducibility(bool isReducible) {
         m_isReducible = isReducible;
     }
 
-    void dumpInner(std::ostream& out, std::string indent) {
+    void dumpInner(std::ostream& out, std::string indent) const {
         out << indent << "header: " << Traits::id(m_header) << std::endl;
         out << indent << "back edges: ";
-        for (auto backEdge: m_backEdges) {
-            out << indent << Traits::id(backEdge) << " ";
+        for (auto&& backEdge: m_backEdges) {
+            out << Traits::id(backEdge) << " ";
         }
         out << std::endl;
         out << indent << "nodes: ";
-        for (auto node: m_nodes) {
-            out << indent << Traits::id(node) << " ";
+        for (auto&& node: m_nodes) {
+            out << Traits::id(node) << " ";
         }
         out << std::endl;
-        for (auto inner: m_inners) {
-            dumpInner(out, indent + "  ");
+        for (auto&& inner: m_inners) {
+            inner->dumpInner(out, indent + "  ");
         }
     }
 private:
     friend LoopTreeBuilder<GraphTy>;
 
     NodeTy m_header;
-    std::vector<NodeTy> m_backEdges;
-    std::vector<NodeTy> m_nodes;
+    std::set<NodeTy> m_backEdges;
+    std::set<NodeTy> m_nodes;
     LoopTreeNode* m_outer{nullptr};
-    std::vector<LoopTreeNode*> m_inners;
+    std::set<LoopTreeNode*> m_inners;
 
     bool m_isReducible{false};
 };
@@ -93,12 +106,23 @@ template<typename GraphTy>
 class LoopTree {
 public:
     using LoopTreeNodeTy = LoopTreeNode<GraphTy>;
+    using Traits = GraphTraits<GraphTy>;
+    using NodeTy = typename Traits::NodeTy;
 
+    LoopTreeNodeTy* getLoop(NodeTy node) {
+        return m_nodesMap[node];
+    }
+
+    void dump(std::ostream& out) const {
+        for (auto&& loop: m_arena) {
+            loop.dump(out);
+        }
+    }
 private:
     friend LoopTreeBuilder<GraphTy>;
 
     std::vector<LoopTreeNodeTy> m_arena;
-    LoopTreeNodeTy* m_head{nullptr};
+    std::unordered_map<NodeTy, LoopTreeNodeTy*> m_nodesMap;
 };
 
 template<typename GraphTy>
@@ -120,7 +144,7 @@ private:
     void appendLoopInfo(NodeTy header, NodeTy backEdgeSrc);
     void populate(GraphTy& G);
     void populateInner(LoopTreeNodeTy* loop, NodeTy node);
-    LoopTreeTy finalize();
+    LoopTreeTy finalize(GraphTy& G);
 
     using ColorMap = std::unordered_map<NodeTy, Gcolor>;
 private:
@@ -133,6 +157,7 @@ private:
 
 template<typename GraphTy>
 void LoopTreeBuilder<GraphTy>::init(GraphTy& G) {
+    m_arena.reserve(Traits::nodesCount(G));
     m_dfsNodes.reserve(Traits::nodesCount(G));
 }
 
@@ -149,20 +174,20 @@ LoopTreeBuilder<GraphTy>::build(GraphTy& G) {
     // for (auto& loop: m_arena) {
     //     loop.dump(std::cout);
     // }
-    return finalize();
+    return finalize(G);
 }
 
 template<typename GraphTy>
 typename LoopTreeBuilder<GraphTy>::LoopTreeTy
-LoopTreeBuilder<GraphTy>::finalize() {
+LoopTreeBuilder<GraphTy>::finalize(GraphTy& G) {
     auto res = LoopTreeTy{};
-    if (!m_arena.size()) {
-        return res;
-    }
     res.m_arena = std::move(m_arena);
-    auto* loop = &res.m_arena[0];
-    while(loop->getOuter()) { loop = loop->getOuter(); }
-    res.m_head = loop;
+    res.m_nodesMap = std::move(m_loopsMap);
+    for (auto nodeIt = Traits::nodesBegin(G); nodeIt != Traits::nodesEnd(G); ++nodeIt) {
+        if(res.m_nodesMap.find(&*nodeIt) == res.m_nodesMap.end()) {
+            res.m_nodesMap[&*nodeIt] = nullptr;
+        }
+    }
     return res;
 }
 
@@ -170,8 +195,8 @@ template<typename GraphTy>
 void LoopTreeBuilder<GraphTy>::appendLoopInfo(NodeTy header, NodeTy backEdgeSrc) {
     auto loopIt = m_loopsMap.find(header);
     if (loopIt == m_loopsMap.end()) {
-        auto& new_loop = m_arena.emplace_back(header);
-        m_loopsMap[header] = &new_loop;
+        m_arena.emplace_back(header);
+        m_loopsMap.insert({header, &(m_arena.back())});
     }
 
     auto isReducible = m_domTree.dominate(header, backEdgeSrc);
@@ -200,24 +225,25 @@ void LoopTreeBuilder<GraphTy>::collectBackEdges(NodeTy node) {
 template<typename GraphTy>
 void LoopTreeBuilder<GraphTy>::populate(GraphTy& G) {
     for(auto&& node: m_dfsNodes) {
-        auto loopIt = m_loopsMap.find(node);
+        m_colors.clear();
+        auto&& loopIt = m_loopsMap.find(node);
         if (loopIt == m_loopsMap.end()) {
             continue;
         }
 
-        auto loop = loopIt->second;
+        auto* loop = loopIt->second;
         if (loop->isReducible()) {
-            auto header = loop->getHeader();
+            auto&& header = loop->getHeader();
             m_colors[header] = Gcolor::BLACK;
-            for(auto backIt = loop->backEdgesBegin(); backIt != loop->backEdgesEnd(); ++backIt) {
+            for(auto&& backIt = loop->backEdgesBegin(); backIt != loop->backEdgesEnd(); ++backIt) {
                 populateInner(loop, *backIt);
             }
             m_colors[header] = Gcolor::WHITE;
         } else {
-            auto backEdgeSrc = loop->backEdgesBegin();
-            auto backEdgeEnd = loop->backEdgesEnd();
+            auto&& backEdgeSrc = loop->backEdgesBegin();
+            auto&& backEdgeEnd = loop->backEdgesEnd();
             for(; backEdgeSrc != backEdgeEnd; ++backEdgeSrc) {
-                auto backEdgeSrcLoop = m_loopsMap.find(*backEdgeSrc);
+                auto&& backEdgeSrcLoop = m_loopsMap.find(*backEdgeSrc);
                 if (backEdgeSrcLoop != m_loopsMap.end()) {
                     m_loopsMap[*backEdgeSrc] = loop;
                 }
@@ -236,6 +262,7 @@ void LoopTreeBuilder<GraphTy>::populateInner(LoopTreeNodeTy* loop, NodeTy node) 
     auto nodeLoopIt = m_loopsMap.find(node);
     if (nodeLoopIt == m_loopsMap.end()) {
         loop->insertNode(node);
+        m_loopsMap[node] = loop;
     } else if(loop != nodeLoopIt->second && nodeLoopIt->second->getOuter() == nullptr) {
         nodeLoopIt->second->setOuter(loop);
         loop->insertInnerLoop(nodeLoopIt->second);
