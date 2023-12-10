@@ -171,9 +171,6 @@ LoopTreeBuilder<GraphTy>::build(GraphTy& G) {
 
     collectBackEdges(Traits::entry(G));
     populate(G);
-    // for (auto& loop: m_arena) {
-    //     loop.dump(std::cout);
-    // }
     return finalize(G);
 }
 

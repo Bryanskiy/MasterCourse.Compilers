@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <iterator>
 #include <memory>
 #include <ostream>
 #include <vector>
@@ -76,29 +77,27 @@ public:
     auto successors() { return Range(m_succs.begin(), m_succs.end()); }
     auto predecessors() { return Range(m_preds.begin(), m_preds.end()); }
 
+    auto collectSuccessors() const { return m_succs; }
+    auto collectPredecessors() const { return m_preds; }
+
     void addSuccessor(BasicBlock* succs) {
         succs->addPredecessor(this);
         m_succs.push_back(succs);
     }
 
-    void removeSuccessor(BasicBlock* succs) {
-        succs->removePredecessor(this);
-        m_succs.remove(succs);
-    }
-
     void setId(std::size_t id) { m_id = id; }
     std::size_t getId() { return m_id; }
 
+    void inverseCondition();
 private:
     void addPredecessor(BasicBlock* pred) { m_preds.push_back(pred); }
-    void removePredecessor(BasicBlock* pred) { m_preds.remove(pred); }
 
 private:
     friend InstrBulder;
 
     IList<Instruction> m_instrs;
-    std::list<BasicBlock*> m_preds;
-    std::list<BasicBlock*> m_succs;
+    std::vector<BasicBlock*> m_preds;
+    std::vector<BasicBlock*> m_succs;
     Function* m_function{nullptr};
 
     std::size_t m_id;
@@ -131,7 +130,9 @@ public:
     Instruction(Type type, BasicBlock* bb) : Value{type}, m_bb(bb) {}
     virtual ~Instruction() = default;
 
-    BasicBlock* getParent() { return m_bb; }
+    BasicBlock* getParent() const { return m_bb; }
+    Opcode getOpcode() const { return m_op; }
+
     void setParent(BasicBlock* bb) { m_bb = bb; }
     virtual void dump(std::ostream& stream) = 0;
 
@@ -158,8 +159,11 @@ public:
     }
 
     Value* getCondition() { return m_cond; }
-    BasicBlock* getFalseBB() { return m_false_bb; }
-    BasicBlock* getTrueBB() { return m_true_bb; }
+    BasicBlock* getFalseBB() const { return m_false_bb; }
+    BasicBlock* getTrueBB() const { return m_true_bb; }
+
+    void setFalseBB(BasicBlock* bb) { m_false_bb = bb; }
+    void setTrueBB(BasicBlock* bb) { m_true_bb = bb; }
 
 private:
     friend InstrBulder;
