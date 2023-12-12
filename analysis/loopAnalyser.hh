@@ -141,7 +141,6 @@ public:
 private:
     void init(GraphTy& G);
     void collectBackEdges(NodeTy node);
-    void appendLoopInfo(NodeTy header, NodeTy backEdgeSrc);
     void populate(GraphTy& G);
     void populateInner(LoopTreeNodeTy* loop, NodeTy node);
     LoopTreeTy finalize(GraphTy& G);
@@ -171,9 +170,6 @@ LoopTreeBuilder<GraphTy>::build(GraphTy& G) {
 
     collectBackEdges(Traits::entry(G));
     populate(G);
-    // for (auto& loop: m_arena) {
-    //     loop.dump(std::cout);
-    // }
     return finalize(G);
 }
 
@@ -192,27 +188,22 @@ LoopTreeBuilder<GraphTy>::finalize(GraphTy& G) {
 }
 
 template<typename GraphTy>
-void LoopTreeBuilder<GraphTy>::appendLoopInfo(NodeTy header, NodeTy backEdgeSrc) {
-    auto loopIt = m_loopsMap.find(header);
-    if (loopIt == m_loopsMap.end()) {
-        m_arena.emplace_back(header);
-        m_loopsMap.insert({header, &(m_arena.back())});
-    }
-
-    auto isReducible = m_domTree.dominate(header, backEdgeSrc);
-    auto& loop = m_loopsMap[header];
-    loop->addReducibility(isReducible);
-    loop->addBackEdge(backEdgeSrc);
-}
-
-template<typename GraphTy>
 void LoopTreeBuilder<GraphTy>::collectBackEdges(NodeTy node) {
     m_colors[node] = Gcolor::GRAY;
 
     for(auto it = Traits::outEdgeBegin(node); it != Traits::outEdgeEnd(node); ++it) {
         NodeTy nextNode = *it;
         if(m_colors[nextNode] == Gcolor::GRAY) {
-            appendLoopInfo(nextNode, node);
+            auto loopIt = m_loopsMap.find(nextNode);
+            if (loopIt == m_loopsMap.end()) {
+                m_arena.emplace_back(nextNode);
+                m_loopsMap.insert({nextNode, &(m_arena.back())});
+            }
+
+            auto isReducible = m_domTree.dominate(nextNode, node);
+            auto& loop = m_loopsMap[nextNode];
+            loop->addReducibility(isReducible);
+            loop->addBackEdge(node);
         } else if(m_colors[nextNode] != Gcolor::BLACK) {
             collectBackEdges(nextNode);
         }
