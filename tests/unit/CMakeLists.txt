@@ -6,6 +6,7 @@ set(TESTS
     domTree.cc
     graphs.cc
     loopTree.cc
+    linearOrder.cc
 )
 
 add_executable(tests ${TESTS})
