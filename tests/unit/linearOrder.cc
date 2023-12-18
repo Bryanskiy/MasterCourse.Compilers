@@ -21,7 +21,6 @@ bool checkOrder(const std::vector<BasicBlock*> lhs, std::vector<BasicBlock*> rhs
 TEST(LinearOrder, Example1) {
     auto function = example1();
     auto graph  = function.getBasicBlocks();
-    auto builder = LinearOrder(graph);
 
     auto range = graph.nodes();
     std::vector<BasicBlock*> bbs;
@@ -29,6 +28,6 @@ TEST(LinearOrder, Example1) {
         bbs.push_back(&*it);
     }
 
-    auto actual = builder.linearize();
+    auto actual = LinearOrder(function, false).linearize();
     ASSERT_TRUE(checkOrder(actual, {bbs[0], bbs[1], bbs[3], bbs[2]}));
 }

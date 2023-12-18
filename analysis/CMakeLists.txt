@@ -3,6 +3,8 @@ add_library(
     linearOrder.cc
 )
 
+target_link_libraries(analysis IR)
+
 target_include_directories(analysis
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 

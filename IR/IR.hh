@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <iterator>
@@ -80,6 +81,14 @@ public:
     auto collectSuccessors() const { return m_succs; }
     auto collectPredecessors() const { return m_preds; }
 
+    void removeSuccessor(BasicBlock* bb) {
+        auto it = std::find_if(m_succs.begin(), m_succs.end(), [bb](BasicBlock* elem) {return bb == elem;});
+        m_succs.erase(it);
+        bb->removePredecessor(this);
+    }
+
+    auto terminator()const { return m_instrs.getLast(); }
+
     void addSuccessor(BasicBlock* succs) {
         succs->addPredecessor(this);
         m_succs.push_back(succs);
@@ -88,10 +97,20 @@ public:
     void setId(std::size_t id) { m_id = id; }
     std::size_t getId() { return m_id; }
 
+    bool empty() {
+        if(m_instrs.empty()) {
+            return true;
+        }
+        return false;
+    }
+
     void inverseCondition();
 private:
     void addPredecessor(BasicBlock* pred) { m_preds.push_back(pred); }
-
+    void removePredecessor(BasicBlock* bb) {
+        auto it = std::find_if(m_preds.begin(), m_preds.end(), [bb](BasicBlock* elem) {return bb == elem;});
+        m_preds.erase(it);
+    }
 private:
     friend InstrBulder;
 

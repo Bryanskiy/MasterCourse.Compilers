@@ -67,6 +67,7 @@ public:
     T* create(Args&&... args);
 
     auto getBasicBlocks() { return BasicBlocksGraph(m_bbs.borrow()); }
+    void insertBetween(BasicBlock* source, BasicBlock* dst, BasicBlock* bb);
 
 private:
     BasicBlocks m_bbs;
