@@ -31,7 +31,7 @@ private:
 
     Function& m_graph;
     LoopTree<GraphTy> m_loopTree;
-    std::unordered_set<BasicBlock*> m_visited;
+    std::set<BasicBlock*> m_visited;
     std::vector<BasicBlock*> m_linear{};
     bool m_skip_cond = true;
 };

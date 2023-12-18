@@ -28,13 +28,12 @@ Function example1() {
     {
         auto builder = InstrBulder(bbs[3]);
         builder.create<GotoInstr>(bbs[1]);
+        bbs[3]->addSuccessor(bbs[1]);
     }
     {
         auto builder = InstrBulder(bbs[2]);
         builder.create<RetInstr>();
     }
-
-    bbs[3]->addSuccessor(bbs[1]);
 
     return function;
 }
@@ -56,19 +55,36 @@ Function example2() {
 
     {
         auto builder = InstrBulder(bbs[1]);
-        builder.create<IfInstr>(v0, bbs[2], bbs[3]);
+        builder.create<IfInstr>(v0, bbs[2], bbs[4]);
+        bbs[1]->addSuccessor(bbs[2]);
+        bbs[1]->addSuccessor(bbs[4]);
     }
-    bbs[1]->addSuccessor(bbs[2]);
-    bbs[1]->addSuccessor(bbs[4]);
+    {
+        auto builder = InstrBulder(bbs[2]);
+        builder.create<GotoInstr>(bbs[5]);
+        bbs[2]->addSuccessor(bbs[5]);
+    }
+    {
+        auto builder = InstrBulder(bbs[3]);
+        builder.create<GotoInstr>(bbs[5]);
+        bbs[3]->addSuccessor(bbs[5]);
+    }
+    {
+        auto builder = InstrBulder(bbs[4]);
+        builder.create<IfInstr>(v0, bbs[3], bbs[6]);
+        bbs[4]->addSuccessor(bbs[3]);
+        bbs[4]->addSuccessor(bbs[6]);
+    }
 
-    bbs[2]->addSuccessor(bbs[5]);
-
-    bbs[3]->addSuccessor(bbs[5]);
-
-    bbs[4]->addSuccessor(bbs[3]);
-    bbs[4]->addSuccessor(bbs[6]);
-
-    bbs[6]->addSuccessor(bbs[5]);
+    {
+        auto builder = InstrBulder(bbs[6]);
+        builder.create<GotoInstr>(bbs[5]);
+        bbs[6]->addSuccessor(bbs[5]);
+    }
+    {
+        auto builder = InstrBulder(bbs[5]);
+        builder.create<RetInstr>();
+    }
 
     return function;
 }

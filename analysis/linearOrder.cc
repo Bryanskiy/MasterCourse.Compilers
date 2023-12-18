@@ -18,6 +18,7 @@ std::vector<BasicBlock*> LinearOrder::linearize() {
     while(!stack.empty()) {
         auto node = stack.top();
         stack.pop();
+        m_visited.insert(node);
         m_linear.push_back(node);
 
         if (!m_skip_cond) {
@@ -27,7 +28,6 @@ std::vector<BasicBlock*> LinearOrder::linearize() {
         for(auto succ = successors.begin(); succ != successors.end(); ++succ) {
             if(checkBlock(*succ)) {
                 stack.push(*succ);
-                m_visited.insert(*succ);
             }
         }
     }
