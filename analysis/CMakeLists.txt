@@ -1,10 +1,13 @@
-# add_library(
-#     analysis
-# )
+add_library(
+    analysis
+    linearOrder.cc
+)
 
-# target_include_directories(analysis
-#     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+target_link_libraries(analysis IR)
 
-#     PRIVATE ${PROJECT_SOURCE_DIR}/IR
-#     PRIVATE ${PROJECT_SOURCE_DIR}/DSA
-# )
+target_include_directories(analysis
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+
+    PRIVATE ${PROJECT_SOURCE_DIR}/IR
+    PRIVATE ${PROJECT_SOURCE_DIR}/DSA
+)

@@ -6,10 +6,11 @@ set(TESTS
     domTree.cc
     graphs.cc
     loopTree.cc
+    linearOrder.cc
 )
 
 add_executable(tests ${TESTS})
-target_link_libraries(tests GTest::gtest GTest::gtest_main pthread)
+target_link_libraries(tests analysis GTest::gtest GTest::gtest_main pthread)
 target_include_directories(tests
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${PROJECT_SOURCE_DIR}/analysis

@@ -48,6 +48,10 @@ public:
         return m_nodes;
     }
 
+    bool contains(NodeTy node) const {
+        return m_nodes.count(node);
+    }
+
     auto getInners() const {
         return m_inners;
     }
