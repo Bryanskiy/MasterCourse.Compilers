@@ -72,7 +72,6 @@ jade::Function example2();
 //                 +-----+
 jade::Function example3();
 
-
 //  +-----------------------+
 //  |                       |
 //  |              +-----+  |

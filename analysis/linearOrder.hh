@@ -11,28 +11,55 @@
 #include "loopAnalyser.hh"
 
 namespace jade {
-class LinearOrder {
-public:
-    using GraphTy = BasicBlocksGraph;
-    using Traits = GraphTraits<GraphTy>;
 
-    LinearOrder(Function& function, bool skip_cond = true) : m_graph(function), m_skip_cond(skip_cond) {
-        auto lBuilder = LoopTreeBuilder<GraphTy>();
-        auto graph  = function.getBasicBlocks();
-        m_loopTree = lBuilder.build(graph);
+template <typename GraphTy> class LinearOrder {
+public:
+  using Traits = GraphTraits<GraphTy>;
+
+  LinearOrder(GraphTy &G) : m_graph(G) {
+    auto lBuilder = LoopTreeBuilder<GraphTy>();
+    m_loopTree = lBuilder.build(G);
+  }
+
+  std::vector<typename Traits::NodeTy> linearize();
+
+private:
+  GraphTy &m_graph;
+  LoopTree<GraphTy> m_loopTree;
+  std::set<typename Traits::NodeTy> m_visited;
+  std::vector<typename Traits::NodeTy> m_linear{};
+};
+
+template <typename GraphTy>
+std::vector<typename GraphTraits<GraphTy>::NodeTy>
+LinearOrder<GraphTy>::linearize() {
+  auto rpoIt = RPOIterator<GraphTy>::begin(m_graph);
+  auto rpoEnd = RPOIterator<GraphTy>::end(m_graph);
+
+  for (; rpoIt != rpoEnd; ++rpoIt) {
+    auto node = *rpoIt;
+    if (m_visited.count(node)) {
+      continue;
     }
 
-    std::vector<BasicBlock*> linearize();
-private:
-    bool checkBlock(BasicBlock* bb);
-    void processCondition(BasicBlock* bb);
-    BasicBlock* insertGotoBB(BasicBlock* source, BasicBlock* dst);
-    bool shouldInverseBranches(BasicBlock* falseBranch, BasicBlock* trueBranch, BasicBlock* cond);
+    m_visited.insert(node);
+    m_linear.push_back(node);
 
-    Function& m_graph;
-    LoopTree<GraphTy> m_loopTree;
-    std::set<BasicBlock*> m_visited;
-    std::vector<BasicBlock*> m_linear{};
-    bool m_skip_cond = true;
-};
+    auto *loop = m_loopTree.getLoop(node);
+    if (loop && loop->getHeader() == node && loop->isReducible()) {
+      auto loop_nodes = loop->getNodes();
+      for (auto &&loop_node : loop_nodes) {
+        if (m_visited.count(node)) {
+          continue;
+        }
+
+        m_visited.insert(loop_node);
+        m_linear.push_back(node);
+      }
+    }
+  }
+
+  return m_linear;
+}
+
 } // namespace jade
