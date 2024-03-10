@@ -4,11 +4,13 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <iostream>
 #include <iterator>
 #include <list>
 #include <memory>
 #include <ostream>
 #include <set>
+#include <sstream>
 #include <vector>
 
 #include "ilist.hh"
@@ -42,10 +44,13 @@ private:
 
 class Value {
 public:
+  Value(std::string name, Type type) : m_name{name}, m_type{type} {}
   Value(Type type) : m_type{type} {}
   Value() = default;
 
   Type::Tag getType() const { return m_type.getType(); }
+  std::string getName() const { return m_name; }
+  void setName(std::string &&name) { m_name = std::move(name); }
 
 protected:
   Type m_type{Type::None};
@@ -68,7 +73,7 @@ public:
 
 template <typename IT> Range(IT begin, IT end) -> Range<IT>;
 
-class BasicBlock final : public IListNode {
+class BasicBlock final : public Value, public IListNode {
 public:
   BasicBlock() = default;
 
@@ -95,7 +100,7 @@ public:
     succs->addPredecessor(this);
     m_succs.push_back(succs);
   }
-  void addPhi(Instruction* instr) { m_phis.push_back(instr); }
+  void addPhi(Instruction *instr) { m_phis.push_back(instr); }
 
   void setId(std::size_t id) { m_id = id; }
   std::size_t getId() { return m_id; }
@@ -121,9 +126,9 @@ private:
   friend InstrBulder;
 
   IList<Instruction> m_instrs;
-  std::vector<BasicBlock*> m_preds;
-  std::vector<BasicBlock*> m_succs;
-  std::vector<Instruction*> m_phis;
+  std::vector<BasicBlock *> m_preds;
+  std::vector<BasicBlock *> m_succs;
+  std::vector<Instruction *> m_phis;
   Function *m_function{nullptr};
 
   std::size_t m_id;
@@ -151,10 +156,15 @@ public:
   Instruction() = default;
   Instruction(Type type) : Value{type} {}
   Instruction(Type type, BasicBlock *bb) : Value{type}, m_bb(bb) {}
+  Instruction(std::string name, Type type, BasicBlock *bb)
+      : Value{name, type}, m_bb(bb) {}
   virtual ~Instruction() = default;
 
   BasicBlock *getParent() const { return m_bb; }
   Opcode getOpcode() const { return m_op; }
+
+  void setId(std::size_t id) { m_id = id; }
+  std::size_t getId() { return m_id; }
 
   void setParent(BasicBlock *bb) { m_bb = bb; }
   virtual void dump(std::ostream &stream) = 0;
@@ -166,6 +176,7 @@ protected:
 
 private:
   BasicBlock *m_bb{nullptr};
+  std::size_t m_id;
 };
 
 class IfInstr final : public Instruction {

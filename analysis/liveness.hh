@@ -15,7 +15,7 @@ public:
 
   void compute();
 
-  std::size_t getLinerNumber(Instruction *instr) const {
+  std::size_t getLinearNumber(Instruction *instr) const {
     return m_linearNumbers.at(instr);
   }
 

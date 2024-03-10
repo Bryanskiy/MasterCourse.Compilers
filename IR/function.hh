@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <memory>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 
@@ -88,6 +89,11 @@ template <> inline BasicBlock *Function::create<BasicBlock>() {
     id = m_bbs.getLast()->getId() + 1;
   }
   bb->setId(id);
+
+  std::stringstream name;
+  name << "bb" << id;
+  bb->setName(name.str());
+
   m_bbs.push_back(bb);
   return bb;
 }
