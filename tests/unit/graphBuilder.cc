@@ -82,11 +82,6 @@ TEST(GraphBuilder, Fib) {
     ASSERT_EQ(bb3->getId(), 3);
   }
 
-  bb0->addSuccessor(bb1);
-  bb1->addSuccessor(bb2);
-  bb1->addSuccessor(bb3);
-  bb3->addSuccessor(bb1);
-
   {
     // check intrusive bb list
     // TODO: rewrite after iter impl

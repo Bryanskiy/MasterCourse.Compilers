@@ -17,18 +17,14 @@ Function example1() {
   {
     auto builder = InstrBulder(bbs[0]);
     builder.create<GotoInstr>(bbs[1]);
-    bbs[0]->addSuccessor(bbs[1]);
   }
   {
     auto builder = InstrBulder(bbs[1]);
     builder.create<IfInstr>(v0, bbs[2], bbs[3]);
-    bbs[1]->addSuccessor(bbs[2]);
-    bbs[1]->addSuccessor(bbs[3]);
   }
   {
     auto builder = InstrBulder(bbs[3]);
     builder.create<GotoInstr>(bbs[1]);
-    bbs[3]->addSuccessor(bbs[1]);
   }
   {
     auto builder = InstrBulder(bbs[2]);

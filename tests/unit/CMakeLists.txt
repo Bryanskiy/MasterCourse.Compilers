@@ -7,6 +7,7 @@ set(TESTS
     graphs.cc
     loopTree.cc
     linearOrder.cc
+    liveness.cc
 )
 
 add_executable(tests ${TESTS})

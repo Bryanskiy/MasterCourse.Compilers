@@ -74,6 +74,7 @@ public:
 
   auto successors() { return Range(m_succs.begin(), m_succs.end()); }
   auto predecessors() { return Range(m_preds.begin(), m_preds.end()); }
+  auto phis() { return Range(m_phis.begin(), m_phis.end()); }
 
   auto collectSuccessors() const { return m_succs; }
   auto collectPredecessors() const { return m_preds; }
@@ -87,10 +88,14 @@ public:
 
   auto terminator() const { return m_instrs.getLast(); }
 
+  auto begin() const { return m_instrs.begin(); }
+  auto end() const { return m_instrs.end(); }
+
   void addSuccessor(BasicBlock *succs) {
     succs->addPredecessor(this);
     m_succs.push_back(succs);
   }
+  void addPhi(Instruction* instr) { m_phis.push_back(instr); }
 
   void setId(std::size_t id) { m_id = id; }
   std::size_t getId() { return m_id; }
@@ -116,8 +121,9 @@ private:
   friend InstrBulder;
 
   IList<Instruction> m_instrs;
-  std::vector<BasicBlock *> m_preds;
-  std::vector<BasicBlock *> m_succs;
+  std::vector<BasicBlock*> m_preds;
+  std::vector<BasicBlock*> m_succs;
+  std::vector<Instruction*> m_phis;
   Function *m_function{nullptr};
 
   std::size_t m_id;
@@ -197,6 +203,7 @@ public:
 
   GotoInstr(BasicBlock *bb) : GotoInstr() { m_bb = bb; }
 
+  BasicBlock *getBB() const { return m_bb; }
   void dump(std::ostream &stream) override {
     // TODO
   }
@@ -332,6 +339,16 @@ template <typename T, typename... Args> T *InstrBulder::create(Args &&...args) {
   auto *elem = new T(args...);
   elem->setParent(m_bb);
   m_bb->m_instrs.insertBefore(m_inserter, elem);
+
+  if constexpr (std::is_same_v<T, IfInstr>) {
+    m_bb->addSuccessor(elem->getFalseBB());
+    m_bb->addSuccessor(elem->getTrueBB());
+  } else if constexpr (std::is_same_v<T, GotoInstr>) {
+    m_bb->addSuccessor(elem->getBB());
+  } else if constexpr (std::is_same_v<T, PhiInstr>) {
+    m_bb->addPhi(elem);
+  }
+
   return elem;
 }
 

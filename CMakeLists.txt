@@ -7,5 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_subdirectory(DSA)
 add_subdirectory(IR)
+add_subdirectory(analysis)
 
 add_subdirectory(tests)
