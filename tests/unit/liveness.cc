@@ -52,22 +52,18 @@ TEST(Liveness, Main) {
   builder = InstrBulder{bbs[1]};
   auto v3 = builder.create<PhiInstr>(Type::create<Type::I32>());
   auto v4 = builder.create<PhiInstr>(Type::create<Type::I32>());
-  auto v5 = builder.create<CmpInstr>(static_cast<Value *>(v4),
-                                     static_cast<Value *>(v0), Opcode::EQ);
-  builder.create<IfInstr>(static_cast<Value *>(v5), bbs[3], bbs[2]);
+  auto v5 = builder.create<CmpInstr>(v4, v0, Opcode::EQ);
+  builder.create<IfInstr>(v5, bbs[3], bbs[2]);
 
   // bb 2
   builder = InstrBulder{bbs[2]};
-  auto v7 = builder.create<BinaryOp>(static_cast<Value *>(v3),
-                                     static_cast<Value *>(v4), Opcode::MUL);
-  auto v8 = builder.create<BinaryOp>(static_cast<Value *>(v4),
-                                     static_cast<Value *>(v0), Opcode::SUB);
+  auto v7 = builder.create<BinaryOp>(v3, v4, Opcode::MUL);
+  auto v8 = builder.create<BinaryOp>(v4, v0, Opcode::SUB);
   builder.create<GotoInstr>(bbs[1]);
 
   // bb3
   builder = InstrBulder{bbs[3]};
-  auto v9 = builder.create<BinaryOp>(static_cast<Value *>(v2),
-                                     static_cast<Value *>(v3), Opcode::ADD);
+  auto v9 = builder.create<BinaryOp>(v2, v3, Opcode::ADD);
   builder.create<RetInstr>(v9);
 
   v3->addOption(v0, bbs[0]);

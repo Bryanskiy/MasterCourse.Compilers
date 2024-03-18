@@ -11,6 +11,7 @@
 #include <ostream>
 #include <set>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include "ilist.hh"
@@ -59,6 +60,7 @@ protected:
 
 class InstrBulder;
 class Instruction;
+class PhiInstr;
 
 template <typename IT> class Range {
   IT m_begin;
@@ -96,11 +98,14 @@ public:
   auto begin() const { return m_instrs.begin(); }
   auto end() const { return m_instrs.end(); }
 
+  auto rbegin() const { return std::reverse_iterator{end()}; }
+  auto rend() const { return std::reverse_iterator(begin()); }
+
   void addSuccessor(BasicBlock *succs) {
     succs->addPredecessor(this);
     m_succs.push_back(succs);
   }
-  void addPhi(Instruction *instr) { m_phis.push_back(instr); }
+  void addPhi(PhiInstr *instr) { m_phis.push_back(instr); }
 
   void setId(std::size_t id) { m_id = id; }
   std::size_t getId() { return m_id; }
@@ -128,7 +133,7 @@ private:
   IList<Instruction> m_instrs;
   std::vector<BasicBlock *> m_preds;
   std::vector<BasicBlock *> m_succs;
-  std::vector<Instruction *> m_phis;
+  std::vector<PhiInstr *> m_phis;
   Function *m_function{nullptr};
 
   std::size_t m_id;
@@ -171,8 +176,12 @@ public:
 
   friend InstrBulder;
 
+  auto begin() const { return m_inputs.begin(); }
+  auto end() const { return m_inputs.end(); }
+
 protected:
   Opcode m_op;
+  std::vector<Instruction *> m_inputs;
 
 private:
   BasicBlock *m_bb{nullptr};
@@ -183,8 +192,9 @@ class IfInstr final : public Instruction {
 public:
   IfInstr() { m_op = Opcode::IF; }
 
-  IfInstr(Value *cond, BasicBlock *false_, BasicBlock *true_) : IfInstr() {
-    m_cond = cond;
+  IfInstr(Instruction *cond, BasicBlock *false_, BasicBlock *true_)
+      : IfInstr() {
+    m_inputs.push_back(cond);
     m_false_bb = false_;
     m_true_bb = true_;
   }
@@ -193,7 +203,7 @@ public:
     // TODO
   }
 
-  Value *getCondition() { return m_cond; }
+  Value *getCondition() { return m_inputs[0]; }
   BasicBlock *getFalseBB() const { return m_false_bb; }
   BasicBlock *getTrueBB() const { return m_true_bb; }
 
@@ -203,7 +213,6 @@ public:
 private:
   friend InstrBulder;
 
-  Value *m_cond{nullptr};
   BasicBlock *m_false_bb{nullptr};
   BasicBlock *m_true_bb{nullptr};
 };
@@ -228,14 +237,11 @@ class RetInstr final : public Instruction {
 public:
   RetInstr() { m_op = Opcode::RET; }
 
-  RetInstr(Value *v) : RetInstr() { m_v = v; }
+  RetInstr(Instruction *v) : RetInstr() { m_inputs.push_back(v); }
 
   void dump(std::ostream &stream) override {
     // TODO
   }
-
-private:
-  Value *m_v;
 };
 
 class PhiInstr final : public Instruction {
@@ -244,29 +250,28 @@ public:
 
   void addOption(Instruction *instr, BasicBlock *bb) {
     assert(getType() == instr->getType());
-    m_instrs.push_back(instr);
-    m_bbs.push_back(bb);
+    m_args.push_back(std::make_pair(bb, instr));
   }
+
+  auto begin() { return m_args.begin(); }
+  auto end() { return m_args.end(); }
 
   void dump(std::ostream &stream) override {
     // TODO
   }
 
 private:
-  std::vector<Instruction *> m_instrs;
-  std::vector<BasicBlock *> m_bbs;
+  std::vector<std::pair<BasicBlock *, Instruction *>> m_args;
 };
 
 class BinaryInstr : public Instruction {
 public:
-  BinaryInstr(Value *lhs, Value *rhs) {
+  BinaryInstr(Instruction *lhs, Instruction *rhs) {
     assert(lhs->getType() == rhs->getType());
-    m_inputs[0] = lhs;
-    m_inputs[1] = rhs;
+    m_inputs.reserve(2);
+    m_inputs.push_back(lhs);
+    m_inputs.push_back(rhs);
   }
-
-private:
-  std::array<Value *, 2> m_inputs;
 };
 
 class CmpInstr final : public BinaryInstr {
@@ -275,7 +280,7 @@ public:
     // TODO
   }
 
-  CmpInstr(Value *lhs, Value *rhs, Opcode kind)
+  CmpInstr(Instruction *lhs, Instruction *rhs, Opcode kind)
       : BinaryInstr(lhs, rhs), m_kind(kind) {
     m_type = Type::create<Type::I1>();
   }
@@ -286,7 +291,7 @@ private:
 
 class BinaryOp final : public BinaryInstr {
 public:
-  BinaryOp(Value *lhs, Value *rhs, Opcode kind)
+  BinaryOp(Instruction *lhs, Instruction *rhs, Opcode kind)
       : BinaryInstr(lhs, rhs), m_kind(kind) {
     m_type = lhs->getType();
   }
@@ -303,10 +308,10 @@ class CastInstr final : public Instruction {
 public:
   CastInstr() { m_op = Opcode::CAST; }
 
-  CastInstr(Value *val, Type type) : CastInstr() {
+  CastInstr(Instruction *val, Type type) : CastInstr() {
     m_cast = type;
     m_type = m_cast;
-    m_val = val;
+    m_inputs.push_back(val);
   }
 
   void dump(std::ostream &stream) override {
@@ -315,7 +320,6 @@ public:
 
 private:
   Type m_cast;
-  Value *m_val;
 };
 
 // for simplification constant is an instruction yet:

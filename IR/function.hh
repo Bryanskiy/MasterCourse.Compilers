@@ -15,9 +15,13 @@ namespace jade {
 using BasicBlocks = IList<BasicBlock>;
 using BasicBlocksRef = IList<BasicBlock, IListBorrower<BasicBlock>>;
 
-class Param : public Value, public IListNode {
+class Param : public Instruction {
 public:
-  Param(Type type) : Value{type} {}
+  Param(Type type) : Instruction{type} {}
+
+  void dump(std::ostream &stream) override {
+    // TODO
+  }
 };
 using Params = IList<Param>;
 

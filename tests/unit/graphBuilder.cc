@@ -114,9 +114,8 @@ TEST(GraphBuilder, Fib) {
   // bb1
   auto builder1 = InstrBulder{bb1};
   auto v3 = builder1.create<PhiInstr>(Type::create<Type::I32>());
-  auto v4 = builder1.create<CmpInstr>(static_cast<Value *>(v3),
-                                      static_cast<Value *>(v0), Opcode::LE);
-  auto if_ = builder1.create<IfInstr>(static_cast<Value *>(v4), bb2, bb3);
+  auto v4 = builder1.create<CmpInstr>(v3, v0, Opcode::LE);
+  auto if_ = builder1.create<IfInstr>(v4, bb2, bb3);
 
   {
     ASSERT_EQ(v3->getPrev(), nullptr);
@@ -147,12 +146,10 @@ TEST(GraphBuilder, Fib) {
   auto builder3 = InstrBulder{bb3};
   auto v6 = builder3.create<PhiInstr>(Type::create<Type::I32>());
   auto c = builder3.create<ConstI32>(1);
-  auto v7 = builder3.create<BinaryOp>(static_cast<Value *>(v6),
-                                      static_cast<Value *>(c), Opcode::ADD);
+  auto v7 = builder3.create<BinaryOp>(v6, c, Opcode::ADD);
   auto v8 = builder3.create<CastInstr>(v7, Type::I64);
   auto v9 = builder3.create<PhiInstr>(Type::create<Type::I64>());
-  auto v10 = builder3.create<BinaryOp>(static_cast<Value *>(v8),
-                                       static_cast<Value *>(v9), Opcode::MUL);
+  auto v10 = builder3.create<BinaryOp>(v8, v9, Opcode::MUL);
   builder3.create<GotoInstr>(bb1);
 
   {
