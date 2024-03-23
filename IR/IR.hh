@@ -179,6 +179,10 @@ public:
   auto begin() const { return m_inputs.begin(); }
   auto end() const { return m_inputs.end(); }
 
+  void dumpRef(std::ostream &stream) {
+    stream << this->getType() << " " << this->getName();
+  }
+
 protected:
   Opcode m_op;
   std::vector<Instruction *> m_inputs;
@@ -200,7 +204,11 @@ public:
   }
 
   void dump(std::ostream &stream) override {
-    // TODO
+    stream << OpcodeToStr(m_op) << " ";
+    m_inputs[0]->dumpRef(stream);
+    stream << " T:" << m_true_bb->getName() << " ";
+    stream << "F:" << m_false_bb->getName() << " ";
+    stream << std::endl;
   }
 
   Value *getCondition() { return m_inputs[0]; }
@@ -225,7 +233,9 @@ public:
 
   BasicBlock *getBB() const { return m_bb; }
   void dump(std::ostream &stream) override {
-    // TODO
+    stream << OpcodeToStr(m_op) << " ";
+    stream << m_bb->getName();
+    stream << std::endl;
   }
 
 private:
@@ -240,7 +250,9 @@ public:
   RetInstr(Instruction *v) : RetInstr() { m_inputs.push_back(v); }
 
   void dump(std::ostream &stream) override {
-    // TODO
+    stream << OpcodeToStr(m_op) << " ";
+    m_inputs[0]->dumpRef(stream);
+    stream << " " << std::endl;
   }
 };
 
@@ -257,7 +269,12 @@ public:
   auto end() { return m_args.end(); }
 
   void dump(std::ostream &stream) override {
-    // TODO
+    stream << OpcodeToStr(m_op) << " ";
+    for (auto &&[bb, instr] : m_args) {
+      stream << bb->getName() << " ";
+      instr->dumpRef(stream);
+      stream << ", ";
+    }
   }
 
 private:
@@ -281,27 +298,23 @@ public:
   }
 
   CmpInstr(Instruction *lhs, Instruction *rhs, Opcode kind)
-      : BinaryInstr(lhs, rhs), m_kind(kind) {
+      : BinaryInstr(lhs, rhs) {
     m_type = Type::create<Type::I1>();
+    m_op = kind;
   }
-
-private:
-  Opcode m_kind;
 };
 
 class BinaryOp final : public BinaryInstr {
 public:
   BinaryOp(Instruction *lhs, Instruction *rhs, Opcode kind)
-      : BinaryInstr(lhs, rhs), m_kind(kind) {
+      : BinaryInstr(lhs, rhs) {
     m_type = lhs->getType();
+    m_op = kind;
   }
 
   void dump(std::ostream &stream) override {
     // TODO
   }
-
-private:
-  Opcode m_kind;
 };
 
 class CastInstr final : public Instruction {
@@ -353,8 +366,17 @@ CONSTANT(std::int8_t, I8);
 template <typename T, typename... Args> T *InstrBulder::create(Args &&...args) {
   auto *elem = new T(args...);
   elem->setParent(m_bb);
-  m_bb->m_instrs.insertBefore(m_inserter, elem);
+  std::size_t id = 0;
+  if (!m_bb->m_instrs.empty()) {
+    id = m_bb->m_instrs.getLast()->getId() + 1;
+  }
+  elem->setId(id);
 
+  std::stringstream name;
+  name << "v" << id;
+  elem->setName(name.str());
+
+  m_bb->m_instrs.insertBefore(m_inserter, elem);
   if constexpr (std::is_same_v<T, IfInstr>) {
     m_bb->addSuccessor(elem->getFalseBB());
     m_bb->addSuccessor(elem->getTrueBB());

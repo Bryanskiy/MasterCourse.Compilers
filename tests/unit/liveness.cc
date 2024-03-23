@@ -9,29 +9,34 @@
 
 using namespace jade;
 
+void CheckLiveIntervals(LiveIn lhs, LiveIn rhs) {
+  ASSERT_EQ(lhs.begin, rhs.begin);
+  ASSERT_EQ(lhs.end, rhs.end);
+}
+
 TEST(Liveness, Check) { ASSERT_TRUE(true); }
 
-// func i32 test_lecture() {
-// 0:
-//   V0 = i32 1
-//   V1 = i32 10
-//   V2 = i32 20
-//   Jmp 1
-//
-// 1:
-//   V3 = i32 Phi void 1, i32 V0, i32 V7
-//   V4 = i32 Phi void 1, i32 V1, i32 V8
-//   V5 = i1 Cmp EQ i32 V4, i32 V0
-//   If i1 V5, T:2, F:3
-//
-// 2:
-//   V7 = i32 Mul i32 V3, i32 V4
-//   V8 = i32 Sub i32 V4, i32 V0
-//   Jmp 1
-//
-// 3:
-//   V9 = i32 Add i32 V2, i32 V3
-//   Ret void 4, i32 V9
+// func i32 test_lecture() {                | Lin num
+// 0:                                       |   0
+//   V0 = i32 1                             |   2
+//   V1 = i32 10                            |   4
+//   V2 = i32 20                            |   6
+//   Jmp 1                                  |   8
+//                                          |
+// 1:                                       |   10
+//   V3 = i32 Phi void 1, i32 V0, i32 V7    |   10
+//   V4 = i32 Phi void 1, i32 V1, i32 V8    |   10
+//   V5 = i1 Cmp EQ i32 V4, i32 V0          |   12
+//   If i1 V5, T:2, F:3                     |   14
+//                                          |
+// 2:                                       |   16
+//   V7 = i32 Mul i32 V3, i32 V4            |   18
+//   V8 = i32 Sub i32 V4, i32 V0            |   20
+//   Jmp 1                                  |   22
+//                                          |
+// 3:                                       |   24
+//   V9 = i32 Add i32 V2, i32 V3            |   26
+//   Ret void 4, i32 V9                     |   28
 //
 // }
 TEST(Liveness, Main) {
@@ -73,6 +78,8 @@ TEST(Liveness, Main) {
 
   Liveness liveness(function);
   liveness.compute();
+
+  // check linear numbers
   EXPECT_EQ(liveness.getLinearNumber(v0), 2);
   EXPECT_EQ(liveness.getLinearNumber(v1), 4);
   EXPECT_EQ(liveness.getLinearNumber(v2), 6);
@@ -82,4 +89,10 @@ TEST(Liveness, Main) {
   EXPECT_EQ(liveness.getLinearNumber(v7), 18);
   EXPECT_EQ(liveness.getLinearNumber(v8), 20);
   EXPECT_EQ(liveness.getLinearNumber(v9), 26);
+
+  // check live intervals
+  CheckLiveIntervals(liveness.getLiveInterval(bbs[0]), LiveIn{0, 10});
+  CheckLiveIntervals(liveness.getLiveInterval(bbs[1]), LiveIn{10, 16});
+  CheckLiveIntervals(liveness.getLiveInterval(bbs[2]), LiveIn{16, 24});
+  CheckLiveIntervals(liveness.getLiveInterval(bbs[3]), LiveIn{24, 30});
 }

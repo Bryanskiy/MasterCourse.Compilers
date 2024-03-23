@@ -20,6 +20,10 @@ struct LiveIn {
   std::size_t end{0};
 };
 
+inline bool operator==(LiveIn lhs, LiveIn rhs) {
+  return lhs.begin == rhs.begin && lhs.end == rhs.end;
+}
+
 class Liveness {
 public:
   using Traits = GraphTraits<BasicBlocksGraph>;
@@ -31,6 +35,8 @@ public:
   std::size_t getLinearNumber(Instruction *instr) const {
     return m_linearNumbers.at(instr);
   }
+
+  LiveIn getLiveInterval(Value *val) const { return m_liveInts.at(val); }
 
 private:
   using LinearNumbers = std::unordered_map<Instruction *, std::size_t>;

@@ -13,6 +13,7 @@ void Liveness::compute() {
   m_loops = loopBuilder.build(graph);
   m_linearNumbers = computeLinearNumbers();
   auto linearOrder = LinearOrder(graph).linearize();
+  return;
 
   for (auto &&bbIt = linearOrder.rbegin(), itEnd = linearOrder.rend();
        bbIt != itEnd; ++bbIt) {
@@ -97,20 +98,21 @@ Liveness::LinearNumbers Liveness::computeLinearNumbers() {
   auto linOrder = LinearOrder(graph);
   auto linearOrder = linOrder.linearize();
 
-  std::size_t currentBBNum = 0;
   std::size_t step = 2;
+  std::size_t currentBBLive = 0;
   for (auto &&bb : linearOrder) {
-    for (auto &&phi : bb->phis()) {
-      ret[phi] = currentBBNum * step;
-    }
-    std::size_t currentInstrNum = currentBBNum;
+    std::size_t currentInstLive = currentBBLive + step;
     for (auto &&instr : *bb) {
+
       if (instr.getOpcode() != Opcode::PHI) {
-        currentInstrNum += 1;
-        ret[&instr] = currentInstrNum * step;
+        ret[&instr] = currentInstLive;
+        currentInstLive += step;
+      } else {
+        ret[&instr] = currentBBLive;
       }
     }
-    currentBBNum = currentInstrNum + 1;
+    m_liveInts[bb] = {currentBBLive, currentInstLive};
+    currentBBLive = currentInstLive;
   }
   return ret;
 }
