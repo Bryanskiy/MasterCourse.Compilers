@@ -48,28 +48,28 @@ TEST(Liveness, Main) {
 
   // bb 0
   auto builder = InstrBulder{bbs[0]};
-  auto v0 = builder.create<ConstI32>(1);
-  auto v1 = builder.create<ConstI32>(10);
-  auto v2 = builder.create<ConstI32>(20);
-  builder.create<GotoInstr>(bbs[1]);
+  auto v0 = builder.create<ConstI32>(1, "v0");
+  auto v1 = builder.create<ConstI32>(10, "v1");
+  auto v2 = builder.create<ConstI32>(20, "v2");
+  builder.create<GotoInstr>(bbs[1], "goto1");
 
   // bb 1
   builder = InstrBulder{bbs[1]};
-  auto v3 = builder.create<PhiInstr>(Type::create<Type::I32>());
-  auto v4 = builder.create<PhiInstr>(Type::create<Type::I32>());
-  auto v5 = builder.create<CmpInstr>(v4, v0, Opcode::EQ);
-  builder.create<IfInstr>(v5, bbs[3], bbs[2]);
+  auto v3 = builder.create<PhiInstr>(Type::create<Type::I32>(), "v3");
+  auto v4 = builder.create<PhiInstr>(Type::create<Type::I32>(), "v4");
+  auto v5 = builder.create<CmpInstr>(v4, v0, Opcode::EQ, "v5");
+  builder.create<IfInstr>(v5, bbs[3], bbs[2], "if1");
 
   // bb 2
   builder = InstrBulder{bbs[2]};
-  auto v7 = builder.create<BinaryOp>(v3, v4, Opcode::MUL);
-  auto v8 = builder.create<BinaryOp>(v4, v0, Opcode::SUB);
-  builder.create<GotoInstr>(bbs[1]);
+  auto v7 = builder.create<BinaryOp>(v3, v4, Opcode::MUL, "v7");
+  auto v8 = builder.create<BinaryOp>(v4, v0, Opcode::SUB, "v8");
+  builder.create<GotoInstr>(bbs[1], "goto2");
 
   // bb3
   builder = InstrBulder{bbs[3]};
-  auto v9 = builder.create<BinaryOp>(v2, v3, Opcode::ADD);
-  builder.create<RetInstr>(v9);
+  auto v9 = builder.create<BinaryOp>(v2, v3, Opcode::ADD, "v9");
+  builder.create<RetInstr>(v9, "ret1");
 
   v3->addOption(v0, bbs[0]);
   v3->addOption(v7, bbs[1]);
@@ -95,4 +95,12 @@ TEST(Liveness, Main) {
   CheckLiveIntervals(liveness.getLiveInterval(bbs[1]), LiveIn{10, 16});
   CheckLiveIntervals(liveness.getLiveInterval(bbs[2]), LiveIn{16, 24});
   CheckLiveIntervals(liveness.getLiveInterval(bbs[3]), LiveIn{24, 30});
+
+  CheckLiveIntervals(liveness.getLiveInterval(v0), LiveIn{2, 24});
+  CheckLiveIntervals(liveness.getLiveInterval(v1), LiveIn{4, 10});
+  CheckLiveIntervals(liveness.getLiveInterval(v2), LiveIn{6, 30});
+  // CheckLiveIntervals(liveness.getLiveInterval(v3), LiveIn{10, 30});
+  // CheckLiveIntervals(liveness.getLiveInterval(v4), LiveIn{10, 24});
+  // CheckLiveIntervals(liveness.getLiveInterval(v5), LiveIn{12, 16});
+  // CheckLiveIntervals(liveness.getLiveInterval(v7), LiveIn{18, 24});
 }

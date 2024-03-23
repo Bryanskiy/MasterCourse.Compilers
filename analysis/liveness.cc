@@ -6,6 +6,13 @@
 
 namespace jade {
 
+static void dumpLiveSet(std::ostream& stream, const Liveness::LiveSet& set) {
+  for(auto* instr: set) {
+    stream << instr->getName() << " ";
+  }
+  stream << std::endl;
+}
+
 void Liveness::compute() {
   auto graph = m_func.getBasicBlocks();
 
@@ -13,12 +20,15 @@ void Liveness::compute() {
   m_loops = loopBuilder.build(graph);
   m_linearNumbers = computeLinearNumbers();
   auto linearOrder = LinearOrder(graph).linearize();
-  return;
 
   for (auto &&bbIt = linearOrder.rbegin(), itEnd = linearOrder.rend();
        bbIt != itEnd; ++bbIt) {
     auto bb = *bbIt;
+    std::cout << "Processing bb: " << bb->getName() << std::endl;
     auto live = computeInitialLiveSet(bb);
+
+    std::cout << "Initial live set for " << bb->getName() << std::endl;
+    dumpLiveSet(std::cout, live);
 
     // initial live interaval for instrs
     auto currInter = m_liveInts[bb];
@@ -29,8 +39,10 @@ void Liveness::compute() {
     }
 
     // process each instr
-    for (auto instrIt = bb->rbegin(); instrIt != bb->rend(); ++instrIt) {
-      auto instr = instrIt.base().getPtr();
+    // FIXME: fix reverse iterator for ilist
+    Instruction* instr = bb->terminator();
+    while(instr != nullptr) {
+    std::cout << "Processing instr: " << instr->getName() << std::endl;
 
       // process output
       m_liveInts[instr].begin = m_linearNumbers[instr];
@@ -45,6 +57,8 @@ void Liveness::compute() {
         m_liveInts[input].end = std::max(currInter.end, m_liveInts[input].end);
         live.insert(input);
       }
+
+      instr = static_cast<Instruction*>(instr->getPrev());
     }
 
     // remove phi's
@@ -68,6 +82,8 @@ void Liveness::compute() {
         m_liveInts[vreg].end = loopEnd;
       }
     }
+
+    m_liveSets[bb] = live;
   }
 }
 

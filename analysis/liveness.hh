@@ -38,9 +38,9 @@ public:
 
   LiveIn getLiveInterval(Value *val) const { return m_liveInts.at(val); }
 
+  using LiveSet = std::unordered_set<Instruction *>;
 private:
   using LinearNumbers = std::unordered_map<Instruction *, std::size_t>;
-  using LiveSet = std::unordered_set<Instruction *>;
   using LiveSets = std::unordered_map<BasicBlock *, LiveSet>;
   using LiveIntervals = std::unordered_map<Value *, LiveIn>;
   using LoopAnalyser = LoopTree<BasicBlocksGraph>;

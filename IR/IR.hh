@@ -45,7 +45,8 @@ private:
 
 class Value {
 public:
-  Value(std::string name, Type type) : m_name{name}, m_type{type} {}
+  Value(std::string &&name, Type type)
+      : m_name{std::move(name)}, m_type{type} {}
   Value(Type type) : m_type{type} {}
   Value() = default;
 
@@ -161,8 +162,8 @@ public:
   Instruction() = default;
   Instruction(Type type) : Value{type} {}
   Instruction(Type type, BasicBlock *bb) : Value{type}, m_bb(bb) {}
-  Instruction(std::string name, Type type, BasicBlock *bb)
-      : Value{name, type}, m_bb(bb) {}
+  Instruction(std::string &&name, Type type, BasicBlock *bb)
+      : Value{std::move(name), type}, m_bb(bb) {}
   virtual ~Instruction() = default;
 
   BasicBlock *getParent() const { return m_bb; }
@@ -203,6 +204,12 @@ public:
     m_true_bb = true_;
   }
 
+  IfInstr(Instruction *cond, BasicBlock *false_, BasicBlock *true_,
+          std::string &&name)
+      : IfInstr(cond, false_, true_) {
+    setName(std::move(name));
+  }
+
   void dump(std::ostream &stream) override {
     stream << OpcodeToStr(m_op) << " ";
     m_inputs[0]->dumpRef(stream);
@@ -230,6 +237,9 @@ public:
   GotoInstr() { m_op = Opcode::GOTO; }
 
   GotoInstr(BasicBlock *bb) : GotoInstr() { m_bb = bb; }
+  GotoInstr(BasicBlock *bb, std::string &&name) : GotoInstr(bb) {
+    setName(std::move(name));
+  }
 
   BasicBlock *getBB() const { return m_bb; }
   void dump(std::ostream &stream) override {
@@ -246,8 +256,10 @@ private:
 class RetInstr final : public Instruction {
 public:
   RetInstr() { m_op = Opcode::RET; }
-
   RetInstr(Instruction *v) : RetInstr() { m_inputs.push_back(v); }
+  RetInstr(Instruction *v, std::string &&name) : RetInstr(v) {
+    setName(std::move(name));
+  }
 
   void dump(std::ostream &stream) override {
     stream << OpcodeToStr(m_op) << " ";
@@ -259,6 +271,9 @@ public:
 class PhiInstr final : public Instruction {
 public:
   PhiInstr(Type type) : Instruction{type} { m_op = Opcode::PHI; }
+  PhiInstr(Type type, std::string &&name) : PhiInstr(type) {
+    setName(std::move(name));
+  }
 
   void addOption(Instruction *instr, BasicBlock *bb) {
     assert(getType() == instr->getType());
@@ -289,6 +304,10 @@ public:
     m_inputs.push_back(lhs);
     m_inputs.push_back(rhs);
   }
+
+  BinaryInstr(Instruction *lhs, Instruction *rhs, std::string &&name) {
+    setName(std::move(name));
+  }
 };
 
 class CmpInstr final : public BinaryInstr {
@@ -302,6 +321,11 @@ public:
     m_type = Type::create<Type::I1>();
     m_op = kind;
   }
+
+  CmpInstr(Instruction *lhs, Instruction *rhs, Opcode kind, std::string &&name)
+      : CmpInstr(lhs, rhs, kind) {
+    setName(std::move(name));
+  }
 };
 
 class BinaryOp final : public BinaryInstr {
@@ -310,6 +334,11 @@ public:
       : BinaryInstr(lhs, rhs) {
     m_type = lhs->getType();
     m_op = kind;
+  }
+
+  BinaryOp(Instruction *lhs, Instruction *rhs, Opcode kind, std::string &&name)
+      : BinaryOp(lhs, rhs, kind) {
+    setName(std::move(name));
   }
 
   void dump(std::ostream &stream) override {
@@ -325,6 +354,11 @@ public:
     m_cast = type;
     m_type = m_cast;
     m_inputs.push_back(val);
+  }
+
+  CastInstr(Instruction *val, Type type, std::string &&name)
+      : CastInstr(val, type) {
+    setName(std::move(name));
   }
 
   void dump(std::ostream &stream) override {
@@ -348,6 +382,10 @@ template <class T> class Constant : public Instruction {};
       m_val = val;                                                             \
     }                                                                          \
                                                                                \
+    Constant(cty val, std::string &&name) : Constant(val) {                    \
+      setName(std::move(name));                                                \
+    }                                                                          \
+                                                                               \
     void dump(std::ostream &stream) override {}                                \
                                                                                \
     cty getValue() const { return m_val; }                                     \
@@ -366,15 +404,6 @@ CONSTANT(std::int8_t, I8);
 template <typename T, typename... Args> T *InstrBulder::create(Args &&...args) {
   auto *elem = new T(args...);
   elem->setParent(m_bb);
-  std::size_t id = 0;
-  if (!m_bb->m_instrs.empty()) {
-    id = m_bb->m_instrs.getLast()->getId() + 1;
-  }
-  elem->setId(id);
-
-  std::stringstream name;
-  name << "v" << id;
-  elem->setName(name.str());
 
   m_bb->m_instrs.insertBefore(m_inserter, elem);
   if constexpr (std::is_same_v<T, IfInstr>) {
