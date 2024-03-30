@@ -4,6 +4,7 @@
 #include "function.hh"
 #include "graph.hh"
 #include "loopAnalyser.hh"
+#include <ostream>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -24,6 +25,11 @@ inline bool operator==(LiveIn lhs, LiveIn rhs) {
   return lhs.begin == rhs.begin && lhs.end == rhs.end;
 }
 
+inline std::ostream &operator<<(std::ostream &out, LiveIn lin) {
+  out << lin.begin << " " << lin.end;
+  return out;
+}
+
 class Liveness {
 public:
   using Traits = GraphTraits<BasicBlocksGraph>;
@@ -39,10 +45,11 @@ public:
   LiveIn getLiveInterval(Value *val) const { return m_liveInts.at(val); }
 
   using LiveSet = std::unordered_set<Instruction *>;
+  using LiveIntervals = std::unordered_map<Value *, LiveIn>;
+
 private:
   using LinearNumbers = std::unordered_map<Instruction *, std::size_t>;
   using LiveSets = std::unordered_map<BasicBlock *, LiveSet>;
-  using LiveIntervals = std::unordered_map<Value *, LiveIn>;
   using LoopAnalyser = LoopTree<BasicBlocksGraph>;
 
   Function &m_func;

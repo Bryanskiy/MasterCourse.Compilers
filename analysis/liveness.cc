@@ -6,9 +6,17 @@
 
 namespace jade {
 
-static void dumpLiveSet(std::ostream& stream, const Liveness::LiveSet& set) {
-  for(auto* instr: set) {
+static void dumpLiveSet(std::ostream &stream, const Liveness::LiveSet &set) {
+  for (auto *instr : set) {
     stream << instr->getName() << " ";
+  }
+  stream << std::endl;
+}
+
+static void dumpLiveInterval(std::ostream &stream,
+                             const Liveness::LiveIntervals &lints) {
+  for (auto &&[val, interaval] : lints) {
+    stream << val->getName() << " " << interaval << " ";
   }
   stream << std::endl;
 }
@@ -24,41 +32,38 @@ void Liveness::compute() {
   for (auto &&bbIt = linearOrder.rbegin(), itEnd = linearOrder.rend();
        bbIt != itEnd; ++bbIt) {
     auto bb = *bbIt;
-    std::cout << "Processing bb: " << bb->getName() << std::endl;
     auto live = computeInitialLiveSet(bb);
 
-    std::cout << "Initial live set for " << bb->getName() << std::endl;
-    dumpLiveSet(std::cout, live);
-
     // initial live interaval for instrs
-    auto currInter = m_liveInts[bb];
+    auto currBBInterval = m_liveInts[bb];
     for (auto *instr : live) {
-      m_liveInts[instr].begin =
-          std::min(currInter.begin, m_liveInts[instr].begin);
-      m_liveInts[instr].end = std::max(currInter.end, m_liveInts[instr].end);
+      m_liveInts[instr].begin = currBBInterval.begin;
+      m_liveInts[instr].end =
+          std::max(currBBInterval.end, m_liveInts[instr].end);
     }
 
     // process each instr
     // FIXME: fix reverse iterator for ilist
-    Instruction* instr = bb->terminator();
-    while(instr != nullptr) {
-    std::cout << "Processing instr: " << instr->getName() << std::endl;
-
+    Instruction *instr = bb->terminator();
+    while (instr != nullptr) {
       // process output
       m_liveInts[instr].begin = m_linearNumbers[instr];
+      if (m_liveInts[instr].end < m_liveInts[instr].begin) {
+        m_liveInts[instr].end = m_liveInts[instr].begin + 2; // if no uses
+      }
       live.erase(instr);
 
       // process inputs
       for (auto &&instrInputIt = instr->begin(); instrInputIt != instr->end();
            ++instrInputIt) {
         auto *input = *instrInputIt;
-        m_liveInts[input].begin =
-            std::min(currInter.begin, m_liveInts[input].begin);
-        m_liveInts[input].end = std::max(currInter.end, m_liveInts[input].end);
+        m_liveInts[input].begin = currBBInterval.begin;
+        m_liveInts[input].end =
+            std::max(m_linearNumbers[instr], m_liveInts[input].end);
         live.insert(input);
       }
 
-      instr = static_cast<Instruction*>(instr->getPrev());
+      instr = static_cast<Instruction *>(instr->getPrev());
     }
 
     // remove phi's
@@ -78,8 +83,8 @@ void Liveness::compute() {
 
       for (auto *vreg : live) {
         m_liveInts[vreg].begin =
-            std::min(currInter.begin, m_liveInts[vreg].begin);
-        m_liveInts[vreg].end = loopEnd;
+            std::min(currBBInterval.begin, m_liveInts[vreg].begin);
+        m_liveInts[vreg].end = std::max(loopEnd, m_liveInts[vreg].end);
       }
     }
 
@@ -98,7 +103,7 @@ Liveness::LiveSet Liveness::computeInitialLiveSet(BasicBlock *bb) {
 
     for (auto *phi : succ->phis()) {
       for (auto &&arg : *phi) {
-        if (arg.first == bb) {
+        if (arg.first->getId() == bb->getId()) {
           live.insert(arg.second);
         }
       }

@@ -72,9 +72,9 @@ TEST(Liveness, Main) {
   builder.create<RetInstr>(v9, "ret1");
 
   v3->addOption(v0, bbs[0]);
-  v3->addOption(v7, bbs[1]);
+  v3->addOption(v7, bbs[2]);
   v4->addOption(v1, bbs[0]);
-  v4->addOption(v8, bbs[1]);
+  v4->addOption(v8, bbs[2]);
 
   Liveness liveness(function);
   liveness.compute();
@@ -98,9 +98,11 @@ TEST(Liveness, Main) {
 
   CheckLiveIntervals(liveness.getLiveInterval(v0), LiveIn{2, 24});
   CheckLiveIntervals(liveness.getLiveInterval(v1), LiveIn{4, 10});
-  CheckLiveIntervals(liveness.getLiveInterval(v2), LiveIn{6, 30});
-  // CheckLiveIntervals(liveness.getLiveInterval(v3), LiveIn{10, 30});
-  // CheckLiveIntervals(liveness.getLiveInterval(v4), LiveIn{10, 24});
-  // CheckLiveIntervals(liveness.getLiveInterval(v5), LiveIn{12, 16});
-  // CheckLiveIntervals(liveness.getLiveInterval(v7), LiveIn{18, 24});
+  CheckLiveIntervals(liveness.getLiveInterval(v2), LiveIn{6, 26});
+  CheckLiveIntervals(liveness.getLiveInterval(v3), LiveIn{10, 26});
+  CheckLiveIntervals(liveness.getLiveInterval(v4), LiveIn{10, 20});
+  CheckLiveIntervals(liveness.getLiveInterval(v5), LiveIn{12, 14});
+  CheckLiveIntervals(liveness.getLiveInterval(v9), LiveIn{26, 28});
+  CheckLiveIntervals(liveness.getLiveInterval(v7), LiveIn{18, 24});
+  CheckLiveIntervals(liveness.getLiveInterval(v8), LiveIn{20, 24});
 }
