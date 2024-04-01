@@ -8,6 +8,7 @@ set(TESTS
     loopTree.cc
     linearOrder.cc
     liveness.cc
+    regAlloc.cc
 )
 
 add_executable(tests ${TESTS})

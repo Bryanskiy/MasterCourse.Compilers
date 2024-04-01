@@ -33,6 +33,8 @@ inline std::ostream &operator<<(std::ostream &out, LiveIn lin) {
 class Liveness {
 public:
   using Traits = GraphTraits<BasicBlocksGraph>;
+  using LiveSet = std::unordered_set<Instruction *>;
+  using LiveIntervals = std::unordered_map<Value *, LiveIn>;
 
   Liveness(Function &func) : m_func{func} {}
 
@@ -43,9 +45,7 @@ public:
   }
 
   LiveIn getLiveInterval(Value *val) const { return m_liveInts.at(val); }
-
-  using LiveSet = std::unordered_set<Instruction *>;
-  using LiveIntervals = std::unordered_map<Value *, LiveIn>;
+  LiveIntervals const &getLiveIntervals() const { return m_liveInts; }
 
 private:
   using LinearNumbers = std::unordered_map<Instruction *, std::size_t>;
@@ -60,6 +60,8 @@ private:
 
   LinearNumbers computeLinearNumbers();
   LiveSet computeInitialLiveSet(BasicBlock *bb);
+  void processEachInstr(LiveSet &live, BasicBlock *bb);
+  void processLoop(LiveSet &live, BasicBlock *bb);
 };
 
 } // namespace jade

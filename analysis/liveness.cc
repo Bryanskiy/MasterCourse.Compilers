@@ -1,4 +1,5 @@
 #include "liveness.hh"
+#include "IR.hh"
 #include "linearOrder.hh"
 #include "opcodes.hh"
 #include <algorithm>
@@ -42,29 +43,7 @@ void Liveness::compute() {
           std::max(currBBInterval.end, m_liveInts[instr].end);
     }
 
-    // process each instr
-    // FIXME: fix reverse iterator for ilist
-    Instruction *instr = bb->terminator();
-    while (instr != nullptr) {
-      // process output
-      m_liveInts[instr].begin = m_linearNumbers[instr];
-      if (m_liveInts[instr].end < m_liveInts[instr].begin) {
-        m_liveInts[instr].end = m_liveInts[instr].begin + 2; // if no uses
-      }
-      live.erase(instr);
-
-      // process inputs
-      for (auto &&instrInputIt = instr->begin(); instrInputIt != instr->end();
-           ++instrInputIt) {
-        auto *input = *instrInputIt;
-        m_liveInts[input].begin = currBBInterval.begin;
-        m_liveInts[input].end =
-            std::max(m_linearNumbers[instr], m_liveInts[input].end);
-        live.insert(input);
-      }
-
-      instr = static_cast<Instruction *>(instr->getPrev());
-    }
+    processEachInstr(live, bb);
 
     // remove phi's
     for (auto *phi : bb->phis()) {
@@ -73,22 +52,51 @@ void Liveness::compute() {
       }
     }
 
-    // process loop
-    auto loop = m_loops.getLoop(bb);
-    if (loop && loop->getHeader() == bb) {
-      std::size_t loopEnd = 0;
-      for (auto *block : loop->getNodes()) {
-        loopEnd = std::max(m_liveInts[block].end, loopEnd);
-      }
-
-      for (auto *vreg : live) {
-        m_liveInts[vreg].begin =
-            std::min(currBBInterval.begin, m_liveInts[vreg].begin);
-        m_liveInts[vreg].end = std::max(loopEnd, m_liveInts[vreg].end);
-      }
-    }
+    processLoop(live, bb);
 
     m_liveSets[bb] = live;
+  }
+}
+
+void Liveness::processEachInstr(LiveSet &live, BasicBlock *bb) {
+  auto currBBInterval = m_liveInts[bb];
+  Instruction *instr = bb->terminator();
+  // FIXME: fix reverse iterator for ilist
+  while (instr != nullptr) {
+    // process output
+    m_liveInts[instr].begin = m_linearNumbers[instr];
+    m_liveInts[instr].end =
+        std::max(m_linearNumbers[instr], m_liveInts[instr].end);
+    live.erase(instr);
+
+    // process inputs
+    for (auto &&instrInputIt = instr->begin(); instrInputIt != instr->end();
+         ++instrInputIt) {
+      auto *input = *instrInputIt;
+      m_liveInts[input].begin = currBBInterval.begin;
+      m_liveInts[input].end =
+          std::max(m_linearNumbers[instr], m_liveInts[input].end);
+      live.insert(input);
+    }
+
+    instr = static_cast<Instruction *>(instr->getPrev());
+  }
+}
+
+void Liveness::processLoop(LiveSet &live, BasicBlock *bb) {
+  auto loop = m_loops.getLoop(bb);
+  if (loop && loop->getHeader() == bb) {
+    auto currBBInterval = m_liveInts[bb];
+    std::size_t loopEnd = 0;
+    for (auto *block : loop->getNodes()) {
+      loopEnd = std::max(m_liveInts[block].end, loopEnd);
+    }
+
+    for (auto *vreg : live) {
+      m_liveInts[vreg].begin =
+          std::min(currBBInterval.begin, m_liveInts[vreg].begin);
+      m_liveInts[vreg].end = std::max(loopEnd, m_liveInts[vreg].end);
+    }
   }
 }
 
