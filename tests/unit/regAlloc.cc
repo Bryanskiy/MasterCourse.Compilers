@@ -73,4 +73,5 @@ TEST(RegAlloc, Main) {
   v4->addOption(v8, bbs[2]);
 
   RegAlloc<3> regAlloc{function};
+  regAlloc.run();
 }

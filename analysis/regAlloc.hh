@@ -13,13 +13,15 @@ namespace jade {
 
 template <std::size_t RegNum> class RegAlloc {
 private:
-  void sortLiveIntervals();
+  void init();
   void expireOldIntervals(std::size_t i);
   void spillAtInterval(std::size_t i);
 
 private:
   Function &m_func;
+
   std::vector<LiveIn> m_intervals;
+  std::vector<Value *> m_instructions;
   // sorted intervals
   std::vector<std::size_t> m_indicies;
   // map from interval idx to reg idx
@@ -31,7 +33,14 @@ private:
   };
   std::set<std::size_t, Comparator> m_activeIntervals{m_comparator};
 
-  std::array<std::size_t, RegNum> m_regs;
+  std::vector<std::size_t> m_freeRegs;
+
+  struct Location {
+    std::size_t idx;
+    bool on_stack;
+  };
+  std::unordered_map<Value *, Location> m_allocInfo;
+  std::size_t m_stackLocation;
 
 public:
   RegAlloc(Function &func) : m_func(func) {}
@@ -39,14 +48,45 @@ public:
   void run();
 };
 
+template <std::size_t RegNum> void RegAlloc<RegNum>::init() {
+  m_stackLocation = 0;
+  m_freeRegs.resize(RegNum);
+  std::iota(m_freeRegs.begin(), m_freeRegs.end(), 0);
+
+  Liveness livenessAnalyser{m_func};
+  livenessAnalyser.compute();
+  auto &&liveIntervals = livenessAnalyser.getLiveIntervals();
+
+  m_intervals.reserve(liveIntervals.size());
+  m_instructions.reserve(liveIntervals.size());
+  m_indicies.resize(liveIntervals.size());
+
+  for (auto &&[value, interval] : liveIntervals) {
+    m_intervals.push_back(interval);
+    m_instructions.push_back(value);
+  }
+
+  std::iota(m_indicies.begin(), m_indicies.end(), 0);
+  std::sort(m_indicies.begin(), m_indicies.end(),
+            [this](std::size_t lhs, std::size_t rhs) {
+              return this->m_intervals[lhs].begin <
+                     this->m_intervals[rhs].begin;
+            });
+}
+
 template <std::size_t RegNum> void RegAlloc<RegNum>::run() {
-  sortLiveIntervals();
+  init();
   for (auto &&idx : m_indicies) {
     expireOldIntervals(idx);
 
     if (m_activeIntervals.size() == RegNum) {
       spillAtInterval(idx);
     } else {
+      auto &&freeReg = m_freeRegs.back();
+      m_freeRegs.pop_back();
+
+      m_allocInfo[m_instructions[idx]] = Location{freeReg, false};
+      m_activeIntervals.insert(idx);
     }
   }
 }
@@ -60,31 +100,28 @@ void RegAlloc<RegNum>::expireOldIntervals(std::size_t i) {
     }
 
     m_activeIntervals.erase(it);
-    m_registers.erase(*it);
+    auto freeReg = m_allocInfo[m_instructions[*it]];
+    m_freeRegs.push_back(freeReg.idx);
   }
 }
 
 template <std::size_t RegNum>
-void RegAlloc<RegNum>::spillAtInterval(std::size_t i) {}
+void RegAlloc<RegNum>::spillAtInterval(std::size_t i) {
+  auto &&spill = *m_activeIntervals.rend();
+  auto &&iLocation = m_allocInfo[m_instructions[i]];
 
-template <std::size_t RegNum> void RegAlloc<RegNum>::sortLiveIntervals() {
-  Liveness livenessAnalyser{m_func};
-  livenessAnalyser.compute();
-  auto &&liveIntervals = livenessAnalyser.getLiveIntervals();
+  if (m_intervals[spill].end > m_intervals[i].end) {
+    auto &&spillLocation = m_allocInfo[m_instructions[spill]];
 
-  m_intervals.reserve(liveIntervals.size());
-  m_indicies.resize(liveIntervals.size());
+    iLocation.idx = spillLocation.idx;
+    spillLocation.on_stack = true;
+    spillLocation.idx = m_stackLocation;
 
-  for (auto &&[_, interval] : liveIntervals) {
-    m_intervals.push_back(interval);
+    m_activeIntervals.erase(spill);
+  } else {
+    iLocation = Location{m_stackLocation, true};
   }
-
-  std::iota(m_indicies.begin(), m_indicies.end(), 0);
-  std::sort(m_indicies.begin(), m_indicies.end(),
-            [this](std::size_t lhs, std::size_t rhs) {
-              return this->m_intervals[lhs].begin <
-                     this->m_intervals[rhs].begin;
-            });
+  ++m_stackLocation;
 }
 
 } /* namespace jade */
