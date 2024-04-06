@@ -10,6 +10,11 @@
 
 using namespace jade;
 
+void checkLocation(Location lhs, Location rhs) {
+  ASSERT_EQ(lhs.idx, rhs.idx);
+  ASSERT_EQ(lhs.on_stack, rhs.on_stack);
+}
+
 TEST(RegAlloc, Check) { ASSERT_TRUE(true); }
 
 // func i32 test_lecture() {                | Lin num
@@ -74,4 +79,26 @@ TEST(RegAlloc, Main) {
 
   RegAlloc<3> regAlloc{function};
   regAlloc.run();
+
+  //  |  0|  2|  4|  6|  8| 10| 12| 14| 16| 18| 20| 22| 24| 26| 28|
+  // 0|   | r0| r0| r0| r0| r0| r0| r0| r0| r0| r0| r0| r0|   |   |
+  // 1|   |   | r1| r1| r1| r1|   |   |   |   |   |   |   |   |   |
+  // 2|   |   |   | s1| s1| s1| s1| s1| s1| s1| s1| s1| s1| s1|   |
+  // 3|   |   |   |   |   | s0| s0| s0| s0| s0| s0| s0| s0| s0|   |
+  // 4|   |   |   |   |   | r1| r1| r1| r1| r1| r1|   |   |   |   |
+  // 5|   |   |   |   |   |   | r2| r2|   |   |   |   |   |   |   |
+  // 6|   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+  // 7|   |   |   |   |   |   |   |   |   | r2| r2| r2| r2|   |   |
+  // 8|   |   |   |   |   |   |   |   |   |   | r1| r1| r1|   |   |
+  // 9|   |   |   |   |   |   |   |   |   |   |   |   |   | r1| r1|
+
+  checkLocation(regAlloc.getLocation(v0), Location{0, false});
+  checkLocation(regAlloc.getLocation(v1), Location{1, false});
+  checkLocation(regAlloc.getLocation(v2), Location{1, true});
+  checkLocation(regAlloc.getLocation(v3), Location{0, true});
+  checkLocation(regAlloc.getLocation(v4), Location{1, false});
+  checkLocation(regAlloc.getLocation(v5), Location{2, false});
+  checkLocation(regAlloc.getLocation(v7), Location{2, false});
+  checkLocation(regAlloc.getLocation(v8), Location{1, false});
+  checkLocation(regAlloc.getLocation(v9), Location{1, false});
 }

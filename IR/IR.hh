@@ -53,6 +53,7 @@ public:
   Type::Tag getType() const { return m_type.getType(); }
   std::string getName() const { return m_name; }
   void setName(std::string &&name) { m_name = std::move(name); }
+  virtual bool is_vreg() const { return false; }
 
 protected:
   Type m_type{Type::None};
@@ -266,6 +267,8 @@ public:
     m_inputs[0]->dumpRef(stream);
     stream << " " << std::endl;
   }
+
+  bool is_vreg() const override { return true; }
 };
 
 class PhiInstr final : public Instruction {
@@ -292,6 +295,8 @@ public:
     }
   }
 
+  bool is_vreg() const override { return true; }
+
 private:
   std::vector<std::pair<BasicBlock *, Instruction *>> m_args;
 };
@@ -308,6 +313,8 @@ public:
   BinaryInstr(Instruction *lhs, Instruction *rhs, std::string &&name) {
     setName(std::move(name));
   }
+
+  bool is_vreg() const override { return true; }
 };
 
 class CmpInstr final : public BinaryInstr {
@@ -326,6 +333,8 @@ public:
       : CmpInstr(lhs, rhs, kind) {
     setName(std::move(name));
   }
+
+  bool is_vreg() const override { return true; }
 };
 
 class BinaryOp final : public BinaryInstr {
@@ -344,6 +353,8 @@ public:
   void dump(std::ostream &stream) override {
     // TODO
   }
+
+  bool is_vreg() const override { return true; }
 };
 
 class CastInstr final : public Instruction {
@@ -364,6 +375,8 @@ public:
   void dump(std::ostream &stream) override {
     // TODO
   }
+
+  bool is_vreg() const override { return true; }
 
 private:
   Type m_cast;
@@ -389,6 +402,8 @@ template <class T> class Constant : public Instruction {};
     void dump(std::ostream &stream) override {}                                \
                                                                                \
     cty getValue() const { return m_val; }                                     \
+                                                                               \
+    bool is_vreg() const override { return true; }                             \
                                                                                \
   private:                                                                     \
     cty m_val;                                                                 \
