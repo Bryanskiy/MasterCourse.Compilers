@@ -150,24 +150,6 @@ private:
   std::size_t m_id;
 };
 
-class InstrBulder final {
-public:
-  using iterator = IListIterator<Instruction>;
-
-  InstrBulder(BasicBlock *bb) : m_bb{bb} { m_inserter = m_bb->m_instrs.end(); }
-
-  void setInsertPoint(Instruction *inserter) {
-    m_inserter = iterator(inserter);
-  }
-  void replace(Instruction *oldInst, Instruction *newInst);
-
-  template <typename T, typename... Args> T *create(Args &&...args);
-
-private:
-  BasicBlock *m_bb{nullptr};
-  iterator m_inserter{nullptr};
-};
-
 class Instruction : public Value, public IListNode {
 public:
   Instruction() = default;
@@ -190,12 +172,23 @@ public:
   auto begin() const { return m_inputs.begin(); }
   auto end() const { return m_inputs.end(); }
 
+  void addUser(Instruction *instr) { m_users.push_back(instr); }
+  void removeUser(Instruction *instr) {
+    auto pos = std::find(m_users.begin(), m_users.end(), instr);
+    m_users.erase(pos);
+  }
   auto usersBegin() const { return m_users.begin(); }
   auto usersEnd() const { return m_users.end(); }
-
-  void dumpRef(std::ostream &stream) {
-    stream << this->getType() << " " << this->getName();
+  std::size_t numUsers() const { return m_users.size(); }
+  void dumpUsers(std::ostream &stream) const {
+    for (auto &&elem : m_users) {
+      elem->dumpRef(stream);
+      stream << " ";
+    }
+    stream << std::endl;
   }
+
+  void dumpRef(std::ostream &stream) { stream << this->getName(); }
   friend InstrBulder;
 
   bool isTerm() const {
@@ -212,6 +205,31 @@ private:
   std::size_t m_id;
 };
 
+class InstrBulder final {
+public:
+  using iterator = IListIterator<Instruction>;
+
+  InstrBulder(BasicBlock *bb) : m_bb{bb} { m_inserter = m_bb->m_instrs.end(); }
+
+  void setInsertPoint(Instruction *inserter) {
+    m_inserter = iterator(inserter);
+  }
+  void replace(Instruction *oldInst, Instruction *newInst);
+  void forget(Instruction *instr);
+  void replaceInput(Instruction *who, Instruction *oldInstr,
+                    Instruction *newInstr) {
+    std::replace(who->m_inputs.begin(), who->m_inputs.end(), oldInstr,
+                 newInstr);
+  }
+  void remove(Instruction *instr);
+
+  template <typename T, typename... Args> T *create(Args &&...args);
+
+private:
+  BasicBlock *m_bb{nullptr};
+  iterator m_inserter{nullptr};
+};
+
 class IfInstr final : public Instruction {
 public:
   IfInstr() { m_op = Opcode::IF; }
@@ -219,6 +237,7 @@ public:
   IfInstr(Instruction *cond, BasicBlock *false_, BasicBlock *true_)
       : IfInstr() {
     m_inputs.push_back(cond);
+    cond->addUser(this);
     m_false_bb = false_;
     m_true_bb = true_;
   }
@@ -275,7 +294,10 @@ private:
 class RetInstr final : public Instruction {
 public:
   RetInstr() { m_op = Opcode::RET; }
-  RetInstr(Instruction *v) : RetInstr() { m_inputs.push_back(v); }
+  RetInstr(Instruction *v) : RetInstr() {
+    m_inputs.push_back(v);
+    v->addUser(this);
+  }
   RetInstr(Instruction *v, std::string &&name) : RetInstr(v) {
     setName(std::move(name));
   }
@@ -323,9 +345,10 @@ class BinaryInstr : public Instruction {
 public:
   BinaryInstr(Instruction *lhs, Instruction *rhs) {
     assert(lhs->getType() == rhs->getType());
-    m_inputs.reserve(2);
     m_inputs.push_back(lhs);
     m_inputs.push_back(rhs);
+    lhs->addUser(this);
+    rhs->addUser(this);
   }
 
   BinaryInstr(Instruction *lhs, Instruction *rhs, std::string &&name) {
@@ -391,6 +414,7 @@ public:
     m_cast = type;
     m_type = m_cast;
     m_inputs.push_back(val);
+    val->addUser(this);
   }
 
   CastInstr(Instruction *val, Type type, std::string &&name)

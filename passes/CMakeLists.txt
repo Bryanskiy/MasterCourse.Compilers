@@ -1,6 +1,7 @@
 add_library(
     passes
     constFolding.cc
+    dce.cc
 )
 
 target_link_libraries(passes IR)
