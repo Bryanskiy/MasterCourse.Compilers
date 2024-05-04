@@ -11,6 +11,7 @@
 #include <ostream>
 #include <set>
 #include <sstream>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -38,6 +39,13 @@ public:
   template <Tag tag> static Type create() { return Type{tag}; }
 
   Tag getType() const { return m_tag; }
+  std::string_view getName() const {
+    static std::unordered_map<Tag, std::string_view> map = {
+        {Tag::I1, "i1"},   {Tag::I8, "i8"},   {Tag::I16, "i16"},
+        {Tag::I32, "i32"}, {Tag::I64, "i64"}, {Tag::None, "none"}};
+
+    return map[m_tag];
+  }
 
 private:
   Tag m_tag;
@@ -119,6 +127,7 @@ public:
     return false;
   }
 
+  void dump(std::ostream &stream);
   void inverseCondition();
 
 private:
@@ -150,6 +159,7 @@ public:
   void setInsertPoint(Instruction *inserter) {
     m_inserter = iterator(inserter);
   }
+  void replace(Instruction *oldInst, Instruction *newInst);
 
   template <typename T, typename... Args> T *create(Args &&...args);
 
@@ -176,18 +186,26 @@ public:
   void setParent(BasicBlock *bb) { m_bb = bb; }
   virtual void dump(std::ostream &stream) = 0;
 
-  friend InstrBulder;
-
+  Instruction *input(std::size_t idx) { return m_inputs[idx]; }
   auto begin() const { return m_inputs.begin(); }
   auto end() const { return m_inputs.end(); }
 
+  auto usersBegin() const { return m_users.begin(); }
+  auto usersEnd() const { return m_users.end(); }
+
   void dumpRef(std::ostream &stream) {
     stream << this->getType() << " " << this->getName();
+  }
+  friend InstrBulder;
+
+  bool isTerm() const {
+    return m_op == Opcode::GOTO || m_op == Opcode::IF || m_op == Opcode::RET;
   }
 
 protected:
   Opcode m_op;
   std::vector<Instruction *> m_inputs;
+  std::vector<Instruction *> m_users;
 
 private:
   BasicBlock *m_bb{nullptr};
@@ -320,7 +338,11 @@ public:
 class CmpInstr final : public BinaryInstr {
 public:
   void dump(std::ostream &stream) override {
-    // TODO
+    stream << OpcodeToStr(m_op) << " ";
+    m_inputs[0]->dumpRef(stream);
+    stream << " " << std::endl;
+    m_inputs[1]->dumpRef(stream);
+    stream << " " << std::endl;
   }
 
   CmpInstr(Instruction *lhs, Instruction *rhs, Opcode kind)
@@ -351,7 +373,11 @@ public:
   }
 
   void dump(std::ostream &stream) override {
-    // TODO
+    stream << OpcodeToStr(m_op) << " ";
+    m_inputs[0]->dumpRef(stream);
+    stream << " " << std::endl;
+    m_inputs[1]->dumpRef(stream);
+    stream << " " << std::endl;
   }
 
   bool is_vreg() const override { return true; }
@@ -382,8 +408,6 @@ private:
   Type m_cast;
 };
 
-// for simplification constant is an instruction yet:
-// v1: i64 = const 1_64;
 template <class T> class Constant : public Instruction {};
 
 // TODO: how to map ctype and jade type in better way?
@@ -399,7 +423,11 @@ template <class T> class Constant : public Instruction {};
       setName(std::move(name));                                                \
     }                                                                          \
                                                                                \
-    void dump(std::ostream &stream) override {}                                \
+    void dump(std::ostream &stream) override {                                 \
+      stream << OpcodeToStr(m_op) << " ";                                      \
+      stream << Type(Type::jadety).getName() << " ";                           \
+      stream << m_val << " ";                                                  \
+    }                                                                          \
                                                                                \
     cty getValue() const { return m_val; }                                     \
                                                                                \

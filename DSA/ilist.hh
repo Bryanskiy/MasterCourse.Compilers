@@ -1,5 +1,6 @@
 #pragma once
 
+#include "IR.hh"
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -21,12 +22,16 @@ public:
 };
 
 struct IListBase {
-  void remove(IListNode *marker) {
+  void removeBase(IListNode *marker) {
     auto *prev = marker->getPrev();
     auto *next = marker->getNext();
 
-    next->setPrev(prev);
-    prev->setNext(next);
+    if (next) {
+      next->setPrev(prev);
+    }
+    if (prev) {
+      prev->setNext(next);
+    }
 
     marker->setNext(nullptr);
     marker->setPrev(nullptr);
@@ -193,6 +198,17 @@ public:
 
     insertBeforeBase(I.getPtr(), node);
     return iterator{node};
+  }
+
+  void remove(pointer node) {
+    if (node == m_last) {
+      m_last = static_cast<pointer>(node->getPrev());
+    }
+    if (node == m_start) {
+      m_start = static_cast<pointer>(node->getNext());
+    }
+    removeBase(node);
+    Traits::deallocate(node);
   }
 
   pointer getLast() const { return m_last; }

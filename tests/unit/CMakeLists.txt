@@ -1,6 +1,7 @@
 find_package(GTest REQUIRED)
 
 set(TESTS
+    constFolding.cc
     graphBuilder.cc
     traversal.cc
     domTree.cc
@@ -12,10 +13,11 @@ set(TESTS
 )
 
 add_executable(tests ${TESTS})
-target_link_libraries(tests analysis GTest::gtest GTest::gtest_main pthread)
+target_link_libraries(tests analysis passes GTest::gtest GTest::gtest_main pthread)
 target_include_directories(tests
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${PROJECT_SOURCE_DIR}/analysis
+    PRIVATE ${PROJECT_SOURCE_DIR}/passes
     PRIVATE ${PROJECT_SOURCE_DIR}/IR
     PRIVATE ${PROJECT_SOURCE_DIR}/DSA
 )
