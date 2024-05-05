@@ -7,11 +7,9 @@
 namespace jade {
 
 struct ConstantFolder : Pass, Visitor {
-  bool canFold(Instruction *instr);
   void visitInstr(Instruction *instr) override;
+  bool canFold(Instruction *instr);
   void run(Function *fn) override { visitFn(fn); }
-
-  void foldAdd(Instruction *instr);
 };
 
 } // namespace jade

@@ -341,6 +341,29 @@ private:
   std::vector<std::pair<BasicBlock *, Instruction *>> m_args;
 };
 
+class UnaryOp final : public Instruction {
+public:
+  UnaryOp(Instruction *val, Opcode kind) {
+    m_inputs.push_back(val);
+    val->addUser(this);
+    m_type = val->getType();
+    m_op = kind;
+  }
+
+  UnaryOp(Instruction *val, Opcode kind, std::string &&name)
+      : UnaryOp(val, kind) {
+    setName(std::move(name));
+  }
+
+  void dump(std::ostream &stream) override {
+    stream << OpcodeToStr(m_op) << " ";
+    m_inputs[0]->dumpRef(stream);
+    stream << " " << std::endl;
+  }
+
+  bool is_vreg() const override { return true; }
+};
+
 class BinaryInstr : public Instruction {
 public:
   BinaryInstr(Instruction *lhs, Instruction *rhs) {

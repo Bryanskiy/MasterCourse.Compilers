@@ -4,6 +4,94 @@
 #include <cassert>
 #include <cstdint>
 
+template <typename T, typename Func> T executeBinaryOp(T lhs, T rhs, Func fn) {
+  return fn(lhs, rhs);
+}
+
+template <typename T, typename Func> T executeUnaryOp(T val, Func fn) {
+  return fn(val);
+}
+
+#define EVALUATE_BINARY_OP(lhsInstr, rhsInstr, type, op)                       \
+  {                                                                            \
+    auto lhsVal = static_cast<Constant<type> *>(lhsInstr)->getValue();         \
+    auto rhsVal = static_cast<Constant<type> *>(rhsInstr)->getValue();         \
+    auto res = executeBinaryOp(lhsVal, rhsVal, op<type>());                    \
+    auto *constInstr = new Constant<type>(res);                                \
+    builder.replace(instr, constInstr);                                        \
+  }
+
+#define EVALUATE_BINARY_OP_FOR_EACH_TYPE(lhsInstr, rhsInstr, tag, op)          \
+  {                                                                            \
+    switch (tag) {                                                             \
+    case Type::Tag::I64:                                                       \
+      EVALUATE_BINARY_OP(lhsInstr, rhsInstr, std::int64_t, op);                \
+      break;                                                                   \
+    case Type::Tag::I32:                                                       \
+      EVALUATE_BINARY_OP(lhsInstr, rhsInstr, std::int32_t, op);                \
+      break;                                                                   \
+    case Type::Tag::I16:                                                       \
+      EVALUATE_BINARY_OP(lhsInstr, rhsInstr, std::int16_t, op);                \
+      break;                                                                   \
+    case Type::Tag::I8:                                                        \
+      EVALUATE_BINARY_OP(lhsInstr, rhsInstr, std::int8_t, op);                 \
+      break;                                                                   \
+    default:                                                                   \
+      break;                                                                   \
+    }                                                                          \
+  }
+
+#define FOLD_BINARY_OP(instr, op)                                              \
+  {                                                                            \
+    auto *bb = instr->getParent();                                             \
+    auto builder = InstrBulder(bb);                                            \
+    auto type = instr->getType();                                              \
+                                                                               \
+    auto lhs = instr->input(0);                                                \
+    auto rhs = instr->input(1);                                                \
+    assert(lhs->getType() == rhs->getType());                                  \
+                                                                               \
+    EVALUATE_BINARY_OP_FOR_EACH_TYPE(lhs, rhs, type, op);                      \
+  }
+
+#define EVALUATE_UNARY_OP(instr, type, op)                                     \
+  {                                                                            \
+    auto val = static_cast<Constant<type> *>(instr)->getValue();               \
+    auto res = executeUnaryOp(val, op<type>());                                \
+    auto *constInstr = new Constant<type>(res);                                \
+    builder.replace(instr, constInstr);                                        \
+  }
+
+#define EVALUATE_UNARY_OP_FOR_EACH_TYPE(instr, tag, op)                        \
+  {                                                                            \
+    switch (tag) {                                                             \
+    case Type::Tag::I64:                                                       \
+      EVALUATE_UNARY_OP(instr, std::int64_t, op);                              \
+      break;                                                                   \
+    case Type::Tag::I32:                                                       \
+      EVALUATE_UNARY_OP(instr, std::int32_t, op);                              \
+      break;                                                                   \
+    case Type::Tag::I16:                                                       \
+      EVALUATE_UNARY_OP(instr, std::int16_t, op);                              \
+      break;                                                                   \
+    case Type::Tag::I8:                                                        \
+      EVALUATE_UNARY_OP(instr, std::int8_t, op);                               \
+      break;                                                                   \
+    default:                                                                   \
+      break;                                                                   \
+    }                                                                          \
+  }
+
+#define FOLD_UNARY_OP(instr, op)                                               \
+  {                                                                            \
+    auto *bb = instr->getParent();                                             \
+    auto builder = InstrBulder(bb);                                            \
+    auto type = instr->getType();                                              \
+                                                                               \
+    auto input = instr->input(0);                                              \
+    EVALUATE_UNARY_OP_FOR_EACH_TYPE(input, type, op);                          \
+  }
+
 namespace jade {
 
 void ConstantFolder::visitInstr(Instruction *instr) {
@@ -13,45 +101,33 @@ void ConstantFolder::visitInstr(Instruction *instr) {
 
   switch (instr->getOpcode()) {
   case Opcode::ADD: {
-    foldAdd(instr);
+    FOLD_BINARY_OP(instr, std::plus);
+    break;
+  }
+  case Opcode::SUB: {
+    FOLD_BINARY_OP(instr, std::minus);
+    break;
+  }
+  case Opcode::MUL: {
+    FOLD_BINARY_OP(instr, std::multiplies);
+    break;
+  }
+  case Opcode::DIV: {
+    FOLD_BINARY_OP(instr, std::divides);
+    break;
+  }
+  case Opcode::NEG: {
+    FOLD_UNARY_OP(instr, std::negate);
+    break;
+  }
+  case Opcode::AND: {
+    FOLD_BINARY_OP(instr, std::logical_and);
     break;
   }
   default:
     break;
   }
 }
-
-void ConstantFolder::foldAdd(Instruction *instr) {
-  auto *bb = instr->getParent();
-  auto builder = InstrBulder(bb);
-  auto type = instr->getType();
-
-  auto lhs = instr->input(0);
-  auto rhs = instr->input(1);
-  assert(lhs->getType() == rhs->getType());
-
-#define REPLACE_ADD(type)                                                      \
-  {                                                                            \
-    auto res = static_cast<Const##type *>(lhs)->getValue() +                   \
-               static_cast<Const##type *>(rhs)->getValue();                    \
-    auto *constInstr = new Const##type(res);                                   \
-    builder.replace(instr, constInstr);                                        \
-    break;                                                                     \
-  }
-
-  switch (type) {
-  case Type::Tag::I64:
-    REPLACE_ADD(I64)
-  case Type::Tag::I32:
-    REPLACE_ADD(I32)
-  case Type::Tag::I16:
-    REPLACE_ADD(I16)
-  case Type::Tag::I8:
-    REPLACE_ADD(I8)
-  default:
-    break;
-  }
-} // namespace jade
 
 bool ConstantFolder::canFold(Instruction *instr) {
   for (auto *input : *instr) {
