@@ -4,19 +4,11 @@
 #include <cassert>
 #include <cstdint>
 
-template <typename T, typename Func> T executeBinaryOp(T lhs, T rhs, Func fn) {
-  return fn(lhs, rhs);
-}
-
-template <typename T, typename Func> T executeUnaryOp(T val, Func fn) {
-  return fn(val);
-}
-
 #define EVALUATE_BINARY_OP(lhsInstr, rhsInstr, type, op)                       \
   {                                                                            \
     auto lhsVal = static_cast<Constant<type> *>(lhsInstr)->getValue();         \
     auto rhsVal = static_cast<Constant<type> *>(rhsInstr)->getValue();         \
-    auto res = executeBinaryOp(lhsVal, rhsVal, op<type>());                    \
+    auto res = op<type>()(lhsVal, rhsVal);                                     \
     auto *constInstr = new Constant<type>(res);                                \
     builder.replace(instr, constInstr);                                        \
   }
@@ -57,7 +49,7 @@ template <typename T, typename Func> T executeUnaryOp(T val, Func fn) {
 #define EVALUATE_UNARY_OP(instr, type, op)                                     \
   {                                                                            \
     auto val = static_cast<Constant<type> *>(instr)->getValue();               \
-    auto res = executeUnaryOp(val, op<type>());                                \
+    auto res = op<type>()(val);                                                \
     auto *constInstr = new Constant<type>(res);                                \
     builder.replace(instr, constInstr);                                        \
   }

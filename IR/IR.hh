@@ -8,6 +8,7 @@
 #include <iterator>
 #include <list>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <sstream>
@@ -221,6 +222,7 @@ public:
     std::replace(who->m_inputs.begin(), who->m_inputs.end(), oldInstr,
                  newInstr);
   }
+  void replaceUsers(Instruction *oldInst, Instruction *newInst);
   void remove(Instruction *instr);
 
   template <typename T, typename... Args> T *create(Args &&...args);
@@ -507,5 +509,8 @@ template <typename T, typename... Args> T *InstrBulder::create(Args &&...args) {
 
   return elem;
 }
+
+std::optional<std::int64_t> loadIntegerConst(Instruction *instr);
+Instruction *createIntegerConstant(std::int64_t val, Type ty);
 
 } // namespace jade

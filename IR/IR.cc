@@ -1,4 +1,5 @@
 #include "IR.hh"
+#include "opcodes.hh"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -6,17 +7,20 @@
 
 namespace jade {
 
-void InstrBulder::replace(Instruction *oldInst, Instruction *newInst) {
-  auto bb = oldInst->getParent();
-  m_bb->m_instrs.insertBefore(iterator{oldInst}, newInst);
-
-  forget(oldInst);
-  // rebind users
+void InstrBulder::replaceUsers(Instruction *oldInst, Instruction *newInst) {
   std::for_each(oldInst->usersBegin(), oldInst->usersEnd(),
                 [this, oldInst, newInst](Instruction *user) {
                   newInst->addUser(user);
                   replaceInput(user, oldInst, newInst);
                 });
+}
+
+void InstrBulder::replace(Instruction *oldInst, Instruction *newInst) {
+  auto bb = oldInst->getParent();
+  m_bb->m_instrs.insertBefore(iterator{oldInst}, newInst);
+
+  forget(oldInst);
+  replaceUsers(oldInst, newInst);
 
   m_bb->m_instrs.remove(oldInst);
 }
@@ -59,6 +63,27 @@ void BasicBlock::inverseCondition() {
   auto tmp = ifInstr->getFalseBB();
   ifInstr->setFalseBB(ifInstr->getTrueBB());
   ifInstr->setTrueBB(tmp);
+}
+
+std::optional<std::int64_t> loadIntegerConst(Instruction *instr) {
+  if (instr->getOpcode() != Opcode::CONST) {
+    return std::nullopt;
+  }
+
+  switch (instr->getType()) {
+  case Type::Tag::I64:
+    return std::optional(static_cast<ConstI64 *>(instr)->getValue());
+  case Type::Tag::I32:
+    return std::optional(static_cast<ConstI32 *>(instr)->getValue());
+  case Type::Tag::I16:
+    return std::optional(static_cast<ConstI16 *>(instr)->getValue());
+  case Type::Tag::I8:
+    return std::optional(static_cast<ConstI8 *>(instr)->getValue());
+  default:
+    return std::nullopt;
+  }
+
+  assert(0);
 }
 
 } // namespace jade

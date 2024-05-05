@@ -2,6 +2,7 @@ add_library(
     passes
     constFolding.cc
     dce.cc
+    peepholes.cc
 )
 
 target_link_libraries(passes IR)
