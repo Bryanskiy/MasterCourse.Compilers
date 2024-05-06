@@ -26,6 +26,8 @@ void PeepHoles::visitInstr(Instruction *instr) {
 }
 
 void PeepHoles::processAnd(Instruction *instr) {
+  assert(instr->getOpcode() == Opcode::AND);
+
   auto builder = InstrBulder(instr->getParent());
   builder.setInsertPoint(instr);
 
@@ -38,24 +40,23 @@ void PeepHoles::processAnd(Instruction *instr) {
     builder.remove(instr);
     return;
   }
-
+  if (lhs->getOpcode() != Opcode::CONST && rhs->getOpcode() != Opcode::CONST) {
+    return;
+  }
+  auto constInstr = lhs->getOpcode() == Opcode::CONST ? lhs : rhs;
   // And x, 0 -> const 0
-  for (auto input : {lhs, rhs}) {
-    auto constantOpt = loadIntegerConst(input);
-    if (constantOpt == std::nullopt) {
-      continue;
-    }
-    auto constant = constantOpt.value();
-    if (constant == 0) {
-      auto constInstr = createIntegerConstant(constant, input->getType());
-      builder.insert(constInstr.get());
-      builder.replaceUsers(instr, constInstr.release());
-      builder.remove(instr);
-    }
+  auto constant = loadIntegerConst(constInstr);
+  if (constant.has_value() && constant.value() == 0) {
+    auto newConstInstr = createIntegerConstant(0, constInstr->getType());
+    builder.insert(newConstInstr.get());
+    builder.replaceUsers(instr, newConstInstr.release());
+    builder.remove(instr);
   }
 }
 
 void PeepHoles::processAdd(Instruction *instr) {
+  assert(instr->getOpcode() == Opcode::ADD);
+
   auto builder = InstrBulder(instr->getParent());
   builder.setInsertPoint(instr);
 
@@ -73,22 +74,41 @@ void PeepHoles::processAdd(Instruction *instr) {
     return;
   }
 
+  if (lhs->getOpcode() != Opcode::CONST && rhs->getOpcode() != Opcode::CONST) {
+    return;
+  }
+  if (lhs->getOpcode() == Opcode::CONST) {
+    std::swap(lhs, rhs);
+  }
   // Add x, 0 -> x
-  for (auto input : {lhs, rhs}) {
-    auto constantOpt = loadIntegerConst(input);
-    if (constantOpt == std::nullopt) {
-      continue;
-    }
-    auto constant = constantOpt.value();
-    if (constant == 0) {
-      auto *x = lhs->getOpcode() == Opcode::CONST ? rhs : lhs;
-      builder.replaceUsers(instr, x);
-      builder.remove(instr);
-      return;
-    }
+  auto constant = loadIntegerConst(rhs);
+  if (constant.has_value() && constant.value() == 0) {
+    builder.replaceUsers(instr, lhs);
+    builder.remove(instr);
   }
 }
 
-void PeepHoles::processAshr(Instruction *instr) {}
+void PeepHoles::processAshr(Instruction *instr) {
+  assert(instr->getOpcode() == Opcode::ASHR);
+
+  auto builder = InstrBulder(instr->getParent());
+  builder.setInsertPoint(instr);
+
+  auto *lhs = instr->input(0);
+  auto *rhs = instr->input(1);
+
+  // Ashr x, 0 -> x
+  if (lhs->getOpcode() != Opcode::CONST && rhs->getOpcode() != Opcode::CONST) {
+    return;
+  }
+  if (lhs->getOpcode() == Opcode::CONST) {
+    std::swap(lhs, rhs);
+  }
+  auto constant = loadIntegerConst(rhs);
+  if (constant.has_value() && constant.value() == 0) {
+    builder.replaceUsers(instr, lhs);
+    builder.remove(instr);
+  }
+}
 
 } // namespace jade

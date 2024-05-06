@@ -86,3 +86,21 @@ TEST(Peepholes, Add2) {
   auto input = term->input(0);
   ASSERT_EQ(input, v0);
 }
+
+TEST(Peepholes, Ashr1) {
+  auto function = Function{};
+
+  auto pm = PassManager(&function);
+  pm.registerPass(std::make_unique<PeepHoles>());
+
+  auto bb0 = function.create<BasicBlock>();
+  auto builder = InstrBulder{bb0};
+  auto v0 = function.create<Param>(Type::create<Type::I32>());
+  auto v1 = builder.create<ConstI32>(0x0, "v0");
+  auto v2 = builder.create<BinaryOp>(v0, v1, Opcode::ASHR);
+  auto ret = builder.create<RetInstr>(v2);
+  pm.run();
+
+  // Ashr x, 0 -> x
+  ASSERT_EQ(ret->getVal(), v0);
+}
