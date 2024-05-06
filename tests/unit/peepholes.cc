@@ -6,6 +6,7 @@
 #include "graphs.hh"
 #include "linearOrder.hh"
 #include "liveness.hh"
+#include "opcodes.hh"
 #include "regAlloc.hh"
 #include "gtest/gtest.h"
 #include <iostream>
@@ -47,4 +48,41 @@ TEST(Peepholes, And2) {
   // And x, 0 -> const 0
   auto res = static_cast<ConstI32 *>(ret->getPrev());
   ASSERT_EQ(res->getValue(), 0);
+}
+
+TEST(Peepholes, Add1) {
+  auto function = Function{};
+
+  auto pm = PassManager(&function);
+  pm.registerPass(std::make_unique<PeepHoles>());
+
+  auto bb0 = function.create<BasicBlock>();
+  auto builder = InstrBulder{bb0};
+  auto v0 = function.create<Param>(Type::create<Type::I32>());
+  auto v1 = builder.create<ConstI32>(0x0, "v0");
+  auto v2 = builder.create<BinaryOp>(v0, v1, Opcode::ADD);
+  auto ret = builder.create<RetInstr>(v2);
+  pm.run();
+
+  // Add x, 0 -> x
+  ASSERT_EQ(ret->getVal(), v0);
+}
+
+TEST(Peepholes, Add2) {
+  auto function = Function{};
+
+  auto pm = PassManager(&function);
+  pm.registerPass(std::make_unique<PeepHoles>());
+
+  auto bb0 = function.create<BasicBlock>();
+  auto builder = InstrBulder{bb0};
+  auto v0 = function.create<Param>(Type::create<Type::I32>());
+  auto v2 = builder.create<BinaryOp>(v0, v0, Opcode::ADD);
+  pm.run();
+
+  // add V1, V1 -> shl V1, 1
+  auto term = bb0->terminator();
+  ASSERT_EQ(term->getOpcode(), Opcode::SHL);
+  auto input = term->input(0);
+  ASSERT_EQ(input, v0);
 }
