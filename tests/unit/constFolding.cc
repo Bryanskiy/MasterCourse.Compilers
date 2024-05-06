@@ -14,8 +14,6 @@
 
 using namespace jade;
 
-TEST(ConstantFolder, Check) { ASSERT_TRUE(true); }
-
 TEST(ConstantFolder, AddI64) {
   auto function = Function{};
   auto pm = PassManager(&function);

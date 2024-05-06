@@ -23,6 +23,7 @@ enum Opcode {
   DIV,
   NEG,
   // other
+  ASHR,
   CAST,
   CONST,
 };
@@ -33,7 +34,7 @@ inline std::string_view OpcodeToStr(Opcode opc) {
       {Opcode::LE, "LE"},       {Opcode::EQ, "EQ"},     {Opcode::ADD, "ADD"},
       {Opcode::MUL, "MUL"},     {Opcode::SUB, "SUB"},   {Opcode::CAST, "CAST"},
       {Opcode::CONST, "CONST"}, {Opcode::RET, "RET"},   {Opcode::AND, "AND"},
-      {Opcode::DIV, "DIV"},     {Opcode::NEG, "NEG"}};
+      {Opcode::DIV, "DIV"},     {Opcode::NEG, "NEG"},   {Opcode::ASHR, "ASHR"}};
 
   return map[opc];
 }

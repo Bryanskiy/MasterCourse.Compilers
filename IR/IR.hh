@@ -148,7 +148,8 @@ private:
   std::vector<PhiInstr *> m_phis;
   Function *m_function{nullptr};
 
-  std::size_t m_id;
+  std::size_t m_id{0};
+  std::size_t m_iid{0}; // counter for instr id
 };
 
 class Instruction : public Value, public IListNode {
@@ -226,6 +227,7 @@ public:
   void remove(Instruction *instr);
 
   template <typename T, typename... Args> T *create(Args &&...args);
+  void insert(Instruction *instr);
 
 private:
   BasicBlock *m_bb{nullptr};
@@ -309,6 +311,8 @@ public:
     m_inputs[0]->dumpRef(stream);
     stream << " " << std::endl;
   }
+
+  Instruction *getVal() const { return m_inputs[0]; }
 
   bool is_vreg() const override { return true; }
 };
@@ -492,10 +496,13 @@ CONSTANT(std::int64_t, I64);
 CONSTANT(std::int32_t, I32);
 CONSTANT(std::int16_t, I16);
 CONSTANT(std::int8_t, I8);
+CONSTANT(bool, I1);
 
 template <typename T, typename... Args> T *InstrBulder::create(Args &&...args) {
   auto *elem = new T(args...);
   elem->setParent(m_bb);
+  elem->setId(m_bb->m_iid);
+  ++m_bb->m_iid;
 
   m_bb->m_instrs.insertBefore(m_inserter, elem);
   if constexpr (std::is_same_v<T, IfInstr>) {
@@ -511,6 +518,6 @@ template <typename T, typename... Args> T *InstrBulder::create(Args &&...args) {
 }
 
 std::optional<std::int64_t> loadIntegerConst(Instruction *instr);
-Instruction *createIntegerConstant(std::int64_t val, Type ty);
+std::unique_ptr<Instruction> createIntegerConstant(std::int64_t val, Type type);
 
 } // namespace jade

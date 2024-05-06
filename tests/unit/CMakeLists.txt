@@ -10,6 +10,7 @@ set(TESTS
     linearOrder.cc
     liveness.cc
     regAlloc.cc
+    peepholes.cc
 )
 
 add_executable(tests ${TESTS})

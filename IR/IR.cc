@@ -7,6 +7,13 @@
 
 namespace jade {
 
+void InstrBulder::insert(Instruction *instr) {
+  instr->setParent(m_bb);
+  instr->setId(m_bb->m_iid);
+  ++m_bb->m_iid;
+  m_bb->m_instrs.insertBefore(m_inserter, instr);
+}
+
 void InstrBulder::replaceUsers(Instruction *oldInst, Instruction *newInst) {
   std::for_each(oldInst->usersBegin(), oldInst->usersEnd(),
                 [this, oldInst, newInst](Instruction *user) {
@@ -84,6 +91,22 @@ std::optional<std::int64_t> loadIntegerConst(Instruction *instr) {
   }
 
   assert(0);
+}
+
+std::unique_ptr<Instruction> createIntegerConstant(std::int64_t val,
+                                                   Type type) {
+  switch (type.getType()) {
+  case Type::Tag::I64:
+    return std::make_unique<ConstI64>(val);
+  case Type::Tag::I32:
+    return std::make_unique<ConstI32>(val);
+  case Type::Tag::I16:
+    return std::make_unique<ConstI16>(val);
+  case Type::Tag::I8:
+    return std::make_unique<ConstI8>(val);
+  default:
+    assert(0);
+  }
 }
 
 } // namespace jade

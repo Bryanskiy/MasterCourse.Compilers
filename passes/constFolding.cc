@@ -8,7 +8,7 @@
   {                                                                            \
     auto lhsVal = static_cast<Constant<type> *>(lhsInstr)->getValue();         \
     auto rhsVal = static_cast<Constant<type> *>(rhsInstr)->getValue();         \
-    auto res = op<type>()(lhsVal, rhsVal);                                     \
+    auto res = op()(lhsVal, rhsVal);                                           \
     auto *constInstr = new Constant<type>(res);                                \
     builder.replace(instr, constInstr);                                        \
   }
@@ -27,6 +27,9 @@
       break;                                                                   \
     case Type::Tag::I8:                                                        \
       EVALUATE_BINARY_OP(lhsInstr, rhsInstr, std::int8_t, op);                 \
+      break;                                                                   \
+    case Type::Tag::I1:                                                        \
+      EVALUATE_BINARY_OP(lhsInstr, rhsInstr, bool, op);                        \
       break;                                                                   \
     default:                                                                   \
       break;                                                                   \
