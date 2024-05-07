@@ -3,6 +3,7 @@
 #include "opcodes.hh"
 #include <cassert>
 #include <cstdint>
+#include <iostream>
 #include <optional>
 
 namespace jade {
@@ -96,6 +97,18 @@ void PeepHoles::processAshr(Instruction *instr) {
 
   auto *lhs = instr->input(0);
   auto *rhs = instr->input(1);
+
+  // v2 = Shl v0, v1
+  // v3. AShr v2, v1 -->  v0
+  auto *prevInstr = static_cast<Instruction *>(instr->getPrev());
+  if (prevInstr && prevInstr->getOpcode() == Opcode::SHL) {
+    auto prevSh = prevInstr->input(1);
+    auto prevInput = prevInstr->input(0);
+    if (prevInstr->getId() == lhs->getId() && rhs->getId() == prevSh->getId()) {
+      builder.replaceUsers(instr, prevInput);
+      builder.remove(instr);
+    }
+  }
 
   // Ashr x, 0 -> x
   if (lhs->getOpcode() != Opcode::CONST && rhs->getOpcode() != Opcode::CONST) {
