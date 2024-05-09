@@ -68,8 +68,6 @@ TEST(GraphBuilder, Fib) {
   // TODO: macros for convinient graph generation
 
   auto function = Function{};
-  auto v0 = function.create<Param>(Type::create<Type::I32>());
-
   auto bb0 = function.create<BasicBlock>();
   auto bb1 = function.create<BasicBlock>();
   auto bb2 = function.create<BasicBlock>();
@@ -96,6 +94,7 @@ TEST(GraphBuilder, Fib) {
 
   // bb0
   auto builder0 = InstrBulder{bb0};
+  auto v0 = builder0.create<ParamInstr>(Type::create<Type::I32>());
   auto v1 = builder0.create<ConstI64>(1);
   auto v2 = builder0.create<ConstI32>(2);
   builder0.create<GotoInstr>(bb1);

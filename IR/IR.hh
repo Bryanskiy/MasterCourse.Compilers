@@ -133,6 +133,8 @@ public:
 
   void removeInstr(Instruction *instr) { m_instrs.remove(instr); }
 
+  std::vector<Instruction *> collectParams() const;
+
 private:
   void addPredecessor(BasicBlock *pred) { m_preds.push_back(pred); }
   void removePredecessor(BasicBlock *bb) {
@@ -176,6 +178,10 @@ public:
   auto begin() const { return m_inputs.begin(); }
   auto end() const { return m_inputs.end(); }
   Instruction *next() { return static_cast<Instruction *>(this->getNext()); }
+
+  void replaceInput(Instruction *oldInstr, Instruction *newInstr) {
+    std::replace(m_inputs.begin(), m_inputs.end(), oldInstr, newInstr);
+  }
 
   void addUser(Instruction *instr) { m_users.push_back(instr); }
   void removeUser(Instruction *instr) {
@@ -235,6 +241,19 @@ public:
 private:
   BasicBlock *m_bb{nullptr};
   iterator m_inserter{nullptr};
+};
+
+class ParamInstr : public Instruction {
+public:
+  ParamInstr(Type type) : Instruction{type} { m_op = Opcode::PARAM; }
+  ParamInstr(Type type, std::string &&name) : ParamInstr{type} {
+    setName(std::move(name));
+  }
+
+  void dump(std::ostream &stream) override {
+    stream << OpcodeToStr(m_op) << " " << getName();
+    stream << std::endl;
+  }
 };
 
 class IfInstr final : public Instruction {
@@ -474,6 +493,9 @@ public:
   CallInstr(Function *fn, Type type, std::string &&name) : CallInstr(fn, type) {
     setName(std::move(name));
   }
+
+  auto argsBegin() { return m_inputs.begin(); }
+  auto argsEnd() { return m_inputs.end(); }
 
   void addArg(Instruction *instr) {
     m_inputs.push_back(instr);

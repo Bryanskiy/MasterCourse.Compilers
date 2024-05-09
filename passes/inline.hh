@@ -10,9 +10,12 @@ public:
 
 private:
   void inlineCall(Instruction *instr);
+
   BasicBlock *splitCallerBlock(Instruction *instr);
   void updateInputsDataFlow(Instruction *instr);
-  void updateReturn();
+  void updateOutputsDataFlow(Instruction *instr);
+  void processSingleRet();
+  void processMultipleRets();
 
 private:
   Function *m_caller{nullptr};

@@ -16,16 +16,6 @@ namespace jade {
 using BasicBlocks = IList<BasicBlock>;
 using BasicBlocksRef = IList<BasicBlock, IListBorrower<BasicBlock>>;
 
-class Param : public Instruction {
-public:
-  Param(Type type) : Instruction{type} {}
-
-  void dump(std::ostream &stream) override {
-    // TODO
-  }
-};
-using Params = IList<Param>;
-
 class BasicBlocksGraph {
 private:
   BasicBlocksRef m_bbs;
@@ -87,8 +77,6 @@ public:
 
 private:
   BasicBlocks m_bbs;
-  Params m_params;
-  std::size_t m_valCounter{0};
 };
 
 template <typename T, typename... Args> T *Function::create(Args &&...args) {
@@ -109,12 +97,6 @@ template <> inline BasicBlock *Function::create<BasicBlock>() {
 
   m_bbs.push_back(bb);
   return bb;
-}
-
-template <> inline Param *Function::create<Param, Type>(Type &&type) {
-  auto *param = new Param{type};
-  m_params.push_back(param);
-  return param;
 }
 
 } // namespace jade

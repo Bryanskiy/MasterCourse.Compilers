@@ -107,4 +107,17 @@ std::unique_ptr<Instruction> createIntegerConstant(std::int64_t val,
   }
 }
 
+std::vector<Instruction *> BasicBlock::collectParams() const {
+  std::vector<Instruction *> ret;
+  for (auto instrIt = begin(); instrIt != end(); ++instrIt) {
+    auto instr = &*instrIt;
+    if (instr->getOpcode() == Opcode::PARAM) {
+      ret.push_back(instr);
+    } else {
+      break;
+    }
+  }
+  return ret;
+}
+
 } // namespace jade

@@ -39,7 +39,7 @@ TEST(Peepholes, And2) {
 
   auto bb0 = function.create<BasicBlock>();
   auto builder = InstrBulder{bb0};
-  auto v0 = function.create<Param>(Type::create<Type::I32>());
+  auto v0 = builder.create<ParamInstr>(Type::create<Type::I32>());
   auto v1 = builder.create<ConstI32>(0x0, "v0");
   auto v2 = builder.create<BinaryOp>(v0, v1, Opcode::AND);
   auto ret = builder.create<RetInstr>(v2);
@@ -58,7 +58,7 @@ TEST(Peepholes, Add1) {
 
   auto bb0 = function.create<BasicBlock>();
   auto builder = InstrBulder{bb0};
-  auto v0 = function.create<Param>(Type::create<Type::I32>());
+  auto v0 = builder.create<ParamInstr>(Type::create<Type::I32>());
   auto v1 = builder.create<ConstI32>(0x0, "v0");
   auto v2 = builder.create<BinaryOp>(v0, v1, Opcode::ADD);
   auto ret = builder.create<RetInstr>(v2);
@@ -76,7 +76,7 @@ TEST(Peepholes, Add2) {
 
   auto bb0 = function.create<BasicBlock>();
   auto builder = InstrBulder{bb0};
-  auto v0 = function.create<Param>(Type::create<Type::I32>());
+  auto v0 = builder.create<ParamInstr>(Type::create<Type::I32>());
   auto v2 = builder.create<BinaryOp>(v0, v0, Opcode::ADD);
   pm.run();
 
@@ -95,7 +95,7 @@ TEST(Peepholes, Ashr1) {
 
   auto bb0 = function.create<BasicBlock>();
   auto builder = InstrBulder{bb0};
-  auto v0 = function.create<Param>(Type::create<Type::I32>());
+  auto v0 = builder.create<ParamInstr>(Type::create<Type::I32>());
   auto v1 = builder.create<ConstI32>(0x0, "v0");
   auto v2 = builder.create<BinaryOp>(v0, v1, Opcode::ASHR);
   auto ret = builder.create<RetInstr>(v2);

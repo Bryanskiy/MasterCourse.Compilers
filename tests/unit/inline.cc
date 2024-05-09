@@ -73,8 +73,8 @@ Function createCalleeGraph() {
   auto bb3 = function.create<BasicBlock>();
 
   auto builder = InstrBulder{bb0};
-  auto v0 = function.create<Param>(Type::create<Type::I64>());
-  auto v1 = function.create<Param>(Type::create<Type::I64>());
+  auto v0 = builder.create<ParamInstr>(Type::create<Type::I64>());
+  auto v1 = builder.create<ParamInstr>(Type::create<Type::I64>());
   auto v2 = builder.create<ConstI64>(1);
   builder.create<GotoInstr>(bb1);
 
