@@ -1,7 +1,6 @@
 add_library(
     IR
     IR.cc
-    function.cc
 )
 
 target_include_directories(IR

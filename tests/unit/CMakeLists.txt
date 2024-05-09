@@ -11,6 +11,7 @@ set(TESTS
     liveness.cc
     regAlloc.cc
     peepholes.cc
+    inline.cc
 )
 
 add_executable(tests ${TESTS})

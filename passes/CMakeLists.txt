@@ -3,6 +3,7 @@ add_library(
     constFolding.cc
     dce.cc
     peepholes.cc
+    inline.cc
 )
 
 target_link_libraries(passes IR)

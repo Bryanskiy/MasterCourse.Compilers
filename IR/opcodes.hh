@@ -27,6 +27,7 @@ enum Opcode {
   SHL,
   CAST,
   CONST,
+  CALL,
 };
 
 inline std::string_view OpcodeToStr(Opcode opc) {
@@ -36,7 +37,7 @@ inline std::string_view OpcodeToStr(Opcode opc) {
       {Opcode::MUL, "MUL"},     {Opcode::SUB, "SUB"},   {Opcode::CAST, "CAST"},
       {Opcode::CONST, "CONST"}, {Opcode::RET, "RET"},   {Opcode::AND, "AND"},
       {Opcode::DIV, "DIV"},     {Opcode::NEG, "NEG"},   {Opcode::ASHR, "ASHR"},
-      {Opcode::SHL, "SHL"},
+      {Opcode::SHL, "SHL"},     {Opcode::CALL, "CALL"},
   };
 
   return map[opc];

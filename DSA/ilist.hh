@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -200,6 +201,8 @@ public:
     return iterator{node};
   }
 
+  iterator insertAfter(iterator I, pointer node) { insertBefore(++I, node); }
+
   void remove(pointer node) {
     if (node == m_last) {
       m_last = static_cast<pointer>(node->getPrev());
@@ -208,7 +211,6 @@ public:
       m_start = static_cast<pointer>(node->getNext());
     }
     removeBase(node);
-    Traits::deallocate(node);
   }
 
   pointer getLast() const { return m_last; }

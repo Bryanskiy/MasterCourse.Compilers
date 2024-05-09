@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
@@ -71,10 +72,18 @@ template <> struct GraphTraits<BasicBlocksGraph> {
 
 class Function {
 public:
+  using iterator = IListIterator<BasicBlock>;
+
   template <typename T, typename... Args> T *create(Args &&...args);
 
   auto getBasicBlocks() { return BasicBlocksGraph(m_bbs.borrow()); }
-  void insertBetween(BasicBlock *source, BasicBlock *dst, BasicBlock *bb);
+  void dump(std::ostream &stream) {
+    for (auto bb = m_bbs.begin(); bb != m_bbs.end(); ++bb) {
+      stream << bb->getName() << ": " << std::endl;
+      bb->dump(stream);
+      stream << std::endl;
+    }
+  }
 
 private:
   BasicBlocks m_bbs;

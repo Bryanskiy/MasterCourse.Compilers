@@ -131,6 +131,8 @@ public:
   void dump(std::ostream &stream);
   void inverseCondition();
 
+  void removeInstr(Instruction *instr) { m_instrs.remove(instr); }
+
 private:
   void addPredecessor(BasicBlock *pred) { m_preds.push_back(pred); }
   void removePredecessor(BasicBlock *bb) {
@@ -173,6 +175,7 @@ public:
   Instruction *input(std::size_t idx) { return m_inputs[idx]; }
   auto begin() const { return m_inputs.begin(); }
   auto end() const { return m_inputs.end(); }
+  Instruction *next() { return static_cast<Instruction *>(this->getNext()); }
 
   void addUser(Instruction *instr) { m_users.push_back(instr); }
   void removeUser(Instruction *instr) {
@@ -427,7 +430,7 @@ public:
   void dump(std::ostream &stream) override {
     stream << OpcodeToStr(m_op) << " ";
     m_inputs[0]->dumpRef(stream);
-    stream << " " << std::endl;
+    stream << " ";
     m_inputs[1]->dumpRef(stream);
     stream << " " << std::endl;
   }
@@ -459,6 +462,37 @@ public:
 
 private:
   Type m_cast;
+};
+
+class CallInstr : public Instruction {
+public:
+  CallInstr(Function *fn, Type type) : m_callee(fn) {
+    m_op = Opcode::CALL;
+    m_type = type;
+  }
+
+  CallInstr(Function *fn, Type type, std::string &&name) : CallInstr(fn, type) {
+    setName(std::move(name));
+  }
+
+  void addArg(Instruction *instr) {
+    m_inputs.push_back(instr);
+    instr->addUser(this);
+  }
+
+  void dump(std::ostream &stream) override {
+    stream << OpcodeToStr(m_op) << " ";
+    for (auto *input : m_inputs) {
+      input->dumpRef(stream);
+      stream << " ";
+    }
+    stream << std::endl;
+  }
+
+  Function *getCallee() const { return m_callee; }
+
+private:
+  Function *m_callee;
 };
 
 template <class T> class Constant : public Instruction {};

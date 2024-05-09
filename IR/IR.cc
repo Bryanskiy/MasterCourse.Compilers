@@ -52,8 +52,6 @@ void BasicBlock::dump(std::ostream &stream) {
   for (auto instrIt = begin(), endIt = end(); instrIt != endIt; ++instrIt) {
     auto instr = &*instrIt;
     instr->dump(stream);
-    stream << std::endl;
-    stream.flush();
   }
 }
 
