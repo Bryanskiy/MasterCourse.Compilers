@@ -112,6 +112,9 @@ public:
   auto rbegin() const { return std::reverse_iterator{end()}; }
   auto rend() const { return std::reverse_iterator(begin()); }
 
+  BasicBlock *next() { return static_cast<BasicBlock *>(getNext()); }
+  BasicBlock *prev() { return static_cast<BasicBlock *>(getPrev()); }
+
   void addSuccessor(BasicBlock *succs) {
     succs->addPredecessor(this);
     m_succs.push_back(succs);
@@ -257,7 +260,8 @@ public:
   }
 
   void dump(std::ostream &stream) override {
-    stream << OpcodeToStr(m_op) << " ";
+    dumpRef(stream);
+    stream << ": " << OpcodeToStr(m_op) << " ";
     m_inputs[0]->dumpRef(stream);
     stream << " T:" << m_true_bb->getName() << " ";
     stream << "F:" << m_false_bb->getName() << " ";
@@ -287,7 +291,8 @@ public:
 
   BasicBlock *getBB() const { return m_bb; }
   void dump(std::ostream &stream) override {
-    stream << OpcodeToStr(m_op) << " ";
+    dumpRef(stream);
+    stream << ": " << OpcodeToStr(m_op) << " ";
     stream << m_bb->getName();
     stream << std::endl;
   }
@@ -309,7 +314,8 @@ public:
   }
 
   void dump(std::ostream &stream) override {
-    stream << OpcodeToStr(m_op) << " ";
+    dumpRef(stream);
+    stream << ": " << OpcodeToStr(m_op) << " ";
     m_inputs[0]->dumpRef(stream);
     stream << " " << std::endl;
   }
@@ -331,16 +337,22 @@ public:
     m_args.push_back(std::make_pair(bb, instr));
   }
 
+  std::pair<BasicBlock *, Instruction *> getOption(std::size_t idx) {
+    return m_args[idx];
+  }
+
   auto begin() { return m_args.begin(); }
   auto end() { return m_args.end(); }
 
   void dump(std::ostream &stream) override {
-    stream << OpcodeToStr(m_op) << " ";
+    dumpRef(stream);
+    stream << ": " << OpcodeToStr(m_op) << " ";
     for (auto &&[bb, instr] : m_args) {
       stream << bb->getName() << " ";
       instr->dumpRef(stream);
       stream << ", ";
     }
+    stream << std::endl;
   }
 
   bool is_vreg() const override { return true; }
@@ -364,7 +376,8 @@ public:
   }
 
   void dump(std::ostream &stream) override {
-    stream << OpcodeToStr(m_op) << " ";
+    dumpRef(stream);
+    stream << ": " << OpcodeToStr(m_op) << " ";
     m_inputs[0]->dumpRef(stream);
     stream << " " << std::endl;
   }
@@ -392,7 +405,8 @@ public:
 class CmpInstr final : public BinaryInstr {
 public:
   void dump(std::ostream &stream) override {
-    stream << OpcodeToStr(m_op) << " ";
+    dumpRef(stream);
+    stream << ": " << OpcodeToStr(m_op) << " ";
     m_inputs[0]->dumpRef(stream);
     stream << " " << std::endl;
     m_inputs[1]->dumpRef(stream);
@@ -427,7 +441,8 @@ public:
   }
 
   void dump(std::ostream &stream) override {
-    stream << OpcodeToStr(m_op) << " ";
+    dumpRef(stream);
+    stream << ": " << OpcodeToStr(m_op) << " ";
     m_inputs[0]->dumpRef(stream);
     stream << " ";
     m_inputs[1]->dumpRef(stream);
@@ -483,7 +498,8 @@ public:
   }
 
   void dump(std::ostream &stream) override {
-    stream << OpcodeToStr(m_op) << " ";
+    dumpRef(stream);
+    stream << ": " << OpcodeToStr(m_op) << " ";
     for (auto *input : m_inputs) {
       input->dumpRef(stream);
       stream << " ";
@@ -513,9 +529,11 @@ template <class T> class Constant : public Instruction {};
     }                                                                          \
                                                                                \
     void dump(std::ostream &stream) override {                                 \
-      stream << OpcodeToStr(m_op) << " ";                                      \
+      dumpRef(stream);                                                         \
+      stream << ": " << OpcodeToStr(m_op) << " ";                              \
       stream << Type(Type::jadety).getName() << " ";                           \
       stream << m_val << " ";                                                  \
+      stream << std::endl;                                                     \
     }                                                                          \
                                                                                \
     cty getValue() const { return m_val; }                                     \

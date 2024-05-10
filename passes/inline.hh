@@ -14,7 +14,8 @@ private:
   BasicBlock *splitCallerBlock(Instruction *instr);
   void updateInputsDataFlow(Instruction *instr);
   void updateOutputsDataFlow(BasicBlock *splitted, Instruction *instr);
-  void mergeGraphs(Instruction *instr);
+  void moveEntryBB(BasicBlock *callBB, Instruction *instr);
+  BasicBlock *mergeGraphs(Instruction *instr);
 
 private:
   Function *m_caller{nullptr};

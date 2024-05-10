@@ -40,11 +40,15 @@ void Inline::run(Function *fn) {
 
 void Inline::inlineCall(Instruction *instr) {
   assert(instr->getOpcode() == Opcode::CALL);
+  auto *callBB = instr->getParent();
 
   auto splitBB = splitCallerBlock(instr);
   updateInputsDataFlow(instr);
   updateOutputsDataFlow(splitBB, instr);
-  mergeGraphs(instr);
+  moveEntryBB(callBB, instr);
+  auto *nextBB = mergeGraphs(instr);
+
+  callBB->removeInstr(instr);
 }
 
 BasicBlock *Inline::splitCallerBlock(Instruction *instr) {
@@ -61,6 +65,8 @@ BasicBlock *Inline::splitCallerBlock(Instruction *instr) {
     i = next;
   }
 
+  currBB->addSuccessor(newBB);
+
   return newBB;
 }
 
@@ -73,20 +79,25 @@ void Inline::updateOutputsDataFlow(BasicBlock *splitted, Instruction *instr) {
 
   auto rets = std::move(retsCollector.rets);
   if (rets.size() == 1) {
-    auto *retInstr = rets[0];
-    replaceUsers(callInstr, retInstr);
+    auto *val = static_cast<RetInstr *>(rets[0])->getVal();
+    replaceUsers(callInstr, val);
   } else {
+    splitted->setInsertPoint(&*splitted->begin());
     auto *phi = splitted->create<PhiInstr>(callInstr->getType());
     for (auto *retInstr : rets) {
-      retInstr->addUser(phi);
-      phi->addOption(retInstr, retInstr->getParent());
+      auto *val = static_cast<RetInstr *>(retInstr)->getVal();
+      val->addUser(phi);
+      phi->addOption(val, retInstr->getParent());
     }
 
     replaceUsers(callInstr, phi);
   }
 
   for (auto *retInstr : rets) {
-    retInstr->getParent()->remove(retInstr);
+    auto *bb = retInstr->getParent();
+    bb->setInsertPoint(retInstr);
+    bb->create<GotoInstr>(splitted);
+    bb->remove(retInstr);
   }
 }
 
@@ -106,14 +117,39 @@ void Inline::updateInputsDataFlow(Instruction *instr) {
   }
 }
 
-void Inline::mergeGraphs(Instruction *instr) {
+void Inline::moveEntryBB(BasicBlock *callBB, Instruction *instr) {
   auto *callInstr = static_cast<CallInstr *>(instr);
   auto *callee = callInstr->getCallee();
 
-  auto bbs = callee->getBasicBlocks().nodes();
-  for (auto bbIt = bbs.begin(); bbIt != bbs.end(); ++bbIt) {
-    m_caller->create<BasicBlock>(*bbIt);
+  auto calleeStartBB = &*callee->getBasicBlocks().nodes().begin();
+  auto *calleeStartInstr = &*calleeStartBB->begin();
+  auto *i = &*callee->getBasicBlocks().nodes().begin()->begin();
+  while (i) {
+    auto *next = i->next();
+    calleeStartBB->removeInstr(i);
+    callBB->insert(i);
+    i = next;
   }
+
+  callee->remove(calleeStartBB);
+}
+
+BasicBlock *Inline::mergeGraphs(Instruction *instr) {
+  auto *callInstr = static_cast<CallInstr *>(instr);
+  auto *callee = callInstr->getCallee();
+
+  // move basic blocks
+  auto bbs = callee->getBasicBlocks().nodes();
+  auto *startBB = &*bbs.begin();
+  auto *bb = startBB;
+  while (bb) {
+    auto *next = bb->next();
+    callee->remove(bb);
+    m_caller->insert(bb);
+    bb = next;
+  }
+
+  return startBB;
 }
 
 } // namespace jade

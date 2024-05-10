@@ -66,6 +66,7 @@ public:
 
   template <typename T, typename... Args> T *create(Args &&...args);
   void insert(BasicBlock *bb);
+  void remove(BasicBlock *bb) { m_bbs.remove(bb); }
 
   auto getBasicBlocks() { return BasicBlocksGraph(m_bbs.borrow()); }
   void dump(std::ostream &stream) {
