@@ -12,10 +12,11 @@ private:
   void inlineCall(Instruction *instr);
 
   BasicBlock *splitCallerBlock(Instruction *instr);
-  void updateInputsDataFlow(Instruction *instr);
-  void updateOutputsDataFlow(BasicBlock *splitted, Instruction *instr);
-  void moveEntryBB(BasicBlock *callBB, Instruction *instr);
-  BasicBlock *mergeGraphs(Instruction *instr);
+  void updateInputsDataFlow(CallInstr *callInstr, Function *callee);
+  void updateOutputsDataFlow(BasicBlock *splitted, CallInstr *callInstr,
+                             Function *callee);
+  void moveEntryBB(BasicBlock *callBB, CallInstr *callInstr, Function *callee);
+  BasicBlock *mergeGraphs(CallInstr *callInstr, Function *callee);
 
 private:
   Function *m_caller{nullptr};

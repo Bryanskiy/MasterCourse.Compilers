@@ -185,10 +185,13 @@ public:
 
   void setParent(BasicBlock *bb) { m_bb = bb; }
   virtual void dump(std::ostream &stream) = 0;
+  virtual Instruction *copy() const = 0;
 
   Instruction *input(std::size_t idx) { return m_inputs[idx]; }
   auto begin() const { return m_inputs.begin(); }
   auto end() const { return m_inputs.end(); }
+  auto begin() { return m_inputs.begin(); }
+  auto end() { return m_inputs.end(); }
   Instruction *next() { return static_cast<Instruction *>(this->getNext()); }
 
   void replaceInput(Instruction *oldInstr, Instruction *newInstr) {
@@ -202,6 +205,10 @@ public:
   }
   auto usersBegin() const { return m_users.begin(); }
   auto usersEnd() const { return m_users.end(); }
+
+  auto usersBegin() { return m_users.begin(); }
+  auto usersEnd() { return m_users.end(); }
+
   std::size_t numUsers() const { return m_users.size(); }
   void dumpUsers(std::ostream &stream) const {
     for (auto &&elem : m_users) {
@@ -235,6 +242,10 @@ public:
     setName(std::move(name));
   }
 
+  Instruction *copy() const override {
+    return new ParamInstr(getType(), getName());
+  }
+
   void dump(std::ostream &stream) override {
     stream << OpcodeToStr(m_op) << " " << getName();
     stream << std::endl;
@@ -257,6 +268,10 @@ public:
           std::string &&name)
       : IfInstr(cond, false_, true_) {
     setName(std::move(name));
+  }
+
+  Instruction *copy() const override {
+    return new IfInstr(m_inputs[0], m_false_bb, m_true_bb, getName());
   }
 
   void dump(std::ostream &stream) override {
@@ -289,7 +304,11 @@ public:
     setName(std::move(name));
   }
 
+  Instruction *copy() const override { return new GotoInstr(m_bb, getName()); }
+
   BasicBlock *getBB() const { return m_bb; }
+  void setBB(BasicBlock *bb) { m_bb = bb; }
+
   void dump(std::ostream &stream) override {
     dumpRef(stream);
     stream << ": " << OpcodeToStr(m_op) << " ";
@@ -311,6 +330,10 @@ public:
   }
   RetInstr(Instruction *v, std::string &&name) : RetInstr(v) {
     setName(std::move(name));
+  }
+
+  Instruction *copy() const override {
+    return new RetInstr(m_inputs[0], getName());
   }
 
   void dump(std::ostream &stream) override {
@@ -344,6 +367,15 @@ public:
   auto begin() { return m_args.begin(); }
   auto end() { return m_args.end(); }
 
+  Instruction *copy() const override {
+    auto *phi = new PhiInstr(m_type, getName());
+    for (auto arg : m_args) {
+      phi->addOption(arg.second, arg.first);
+    }
+
+    return phi;
+  }
+
   void dump(std::ostream &stream) override {
     dumpRef(stream);
     stream << ": " << OpcodeToStr(m_op) << " ";
@@ -373,6 +405,10 @@ public:
   UnaryOp(Instruction *val, Opcode kind, std::string &&name)
       : UnaryOp(val, kind) {
     setName(std::move(name));
+  }
+
+  Instruction *copy() const override {
+    return new UnaryOp(m_inputs[0], m_op, getName());
   }
 
   void dump(std::ostream &stream) override {
@@ -424,6 +460,10 @@ public:
     setName(std::move(name));
   }
 
+  Instruction *copy() const override {
+    return new CmpInstr(m_inputs[0], m_inputs[1], m_op, getName());
+  }
+
   bool is_vreg() const override { return true; }
 };
 
@@ -449,6 +489,10 @@ public:
     stream << " " << std::endl;
   }
 
+  Instruction *copy() const override {
+    return new BinaryOp(m_inputs[0], m_inputs[1], m_op, getName());
+  }
+
   bool is_vreg() const override { return true; }
 };
 
@@ -470,6 +514,11 @@ public:
 
   void dump(std::ostream &stream) override {
     // TODO
+  }
+
+  Instruction *copy() const override {
+    // todo
+    return nullptr;
   }
 
   bool is_vreg() const override { return true; }
@@ -495,6 +544,11 @@ public:
   void addArg(Instruction *instr) {
     m_inputs.push_back(instr);
     instr->addUser(this);
+  }
+
+  Instruction *copy() const override {
+    // todo
+    return nullptr;
   }
 
   void dump(std::ostream &stream) override {
@@ -526,6 +580,10 @@ template <class T> class Constant : public Instruction {};
                                                                                \
     Constant(cty val, std::string &&name) : Constant(val) {                    \
       setName(std::move(name));                                                \
+    }                                                                          \
+                                                                               \
+    Instruction *copy() const override {                                       \
+      return new Constant<cty>(m_val, getName());                              \
     }                                                                          \
                                                                                \
     void dump(std::ostream &stream) override {                                 \

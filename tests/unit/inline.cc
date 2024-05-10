@@ -6,6 +6,7 @@
 #include "opcodes.hh"
 #include "gtest/gtest.h"
 #include <array>
+#include <memory>
 #include <vector>
 
 using namespace jade;
@@ -100,7 +101,7 @@ TEST(Inline, test1) {
   pm.registerPass(std::make_unique<Inline>());
   pm.run();
 
-  // caller.dump(std::cout);
+  caller.dump(std::cout);
 
   auto bbGraph = caller.getBasicBlocks().nodes();
 
@@ -184,4 +185,17 @@ TEST(Inline, test1) {
 
   auto *ifI = v8->next();
   ASSERT_EQ(ifI->getOpcode(), Opcode::IF);
+}
+
+TEST(Inline, Gcopy) {
+  std::unique_ptr<Function> copy;
+  {
+    Function callee = createCalleeGraph();
+    std::cout << "Original:" << std::endl;
+    // callee.dump(std::cout);
+    copy = callee.copy();
+  }
+
+  //   std::cout << "copy:" << std::endl;
+  //   copy->dump(std::cout);
 }

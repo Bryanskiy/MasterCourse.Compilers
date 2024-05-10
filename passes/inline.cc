@@ -40,13 +40,16 @@ void Inline::run(Function *fn) {
 
 void Inline::inlineCall(Instruction *instr) {
   assert(instr->getOpcode() == Opcode::CALL);
+
+  auto *callInstr = static_cast<CallInstr *>(instr);
   auto *callBB = instr->getParent();
+  auto callee = callInstr->getCallee()->copy();
 
   auto splitBB = splitCallerBlock(instr);
-  updateInputsDataFlow(instr);
-  updateOutputsDataFlow(splitBB, instr);
-  moveEntryBB(callBB, instr);
-  auto *nextBB = mergeGraphs(instr);
+  updateInputsDataFlow(callInstr, callee.get());
+  updateOutputsDataFlow(splitBB, callInstr, callee.get());
+  moveEntryBB(callBB, callInstr, callee.get());
+  auto *nextBB = mergeGraphs(callInstr, callee.get());
 
   callBB->removeInstr(instr);
 }
@@ -70,10 +73,8 @@ BasicBlock *Inline::splitCallerBlock(Instruction *instr) {
   return newBB;
 }
 
-void Inline::updateOutputsDataFlow(BasicBlock *splitted, Instruction *instr) {
-  auto *callInstr = static_cast<CallInstr *>(instr);
-  auto *callee = callInstr->getCallee();
-
+void Inline::updateOutputsDataFlow(BasicBlock *splitted, CallInstr *callInstr,
+                                   Function *callee) {
   auto retsCollector = RetInstrCollector();
   walkFn(&retsCollector, callee);
 
@@ -97,14 +98,11 @@ void Inline::updateOutputsDataFlow(BasicBlock *splitted, Instruction *instr) {
     auto *bb = retInstr->getParent();
     bb->setInsertPoint(retInstr);
     bb->create<GotoInstr>(splitted);
-    bb->remove(retInstr);
+    // bb->remove(retInstr);
   }
 }
 
-void Inline::updateInputsDataFlow(Instruction *instr) {
-  auto *callInstr = static_cast<CallInstr *>(instr);
-  auto *callee = callInstr->getCallee();
-
+void Inline::updateInputsDataFlow(CallInstr *callInstr, Function *callee) {
   BasicBlock *fstBB = &*callee->getBasicBlocks().nodes().begin();
   auto params = fstBB->collectParams();
 
@@ -117,10 +115,8 @@ void Inline::updateInputsDataFlow(Instruction *instr) {
   }
 }
 
-void Inline::moveEntryBB(BasicBlock *callBB, Instruction *instr) {
-  auto *callInstr = static_cast<CallInstr *>(instr);
-  auto *callee = callInstr->getCallee();
-
+void Inline::moveEntryBB(BasicBlock *callBB, CallInstr *callInstr,
+                         Function *callee) {
   auto calleeStartBB = &*callee->getBasicBlocks().nodes().begin();
   auto *calleeStartInstr = &*calleeStartBB->begin();
   auto *i = &*callee->getBasicBlocks().nodes().begin()->begin();
@@ -134,11 +130,7 @@ void Inline::moveEntryBB(BasicBlock *callBB, Instruction *instr) {
   callee->remove(calleeStartBB);
 }
 
-BasicBlock *Inline::mergeGraphs(Instruction *instr) {
-  auto *callInstr = static_cast<CallInstr *>(instr);
-  auto *callee = callInstr->getCallee();
-
-  // move basic blocks
+BasicBlock *Inline::mergeGraphs(CallInstr *callInstr, Function *callee) {
   auto bbs = callee->getBasicBlocks().nodes();
   auto *startBB = &*bbs.begin();
   auto *bb = startBB;
