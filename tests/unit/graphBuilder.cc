@@ -93,11 +93,10 @@ TEST(GraphBuilder, Fib) {
   }
 
   // bb0
-  auto builder0 = InstrBulder{bb0};
-  auto v0 = builder0.create<ParamInstr>(Type::create<Type::I32>());
-  auto v1 = builder0.create<ConstI64>(1);
-  auto v2 = builder0.create<ConstI32>(2);
-  builder0.create<GotoInstr>(bb1);
+  auto v0 = bb0->create<ParamInstr>(Type::create<Type::I32>());
+  auto v1 = bb0->create<ConstI64>(1);
+  auto v2 = bb0->create<ConstI32>(2);
+  bb0->create<GotoInstr>(bb1);
 
   {
     ASSERT_EQ(v1->getType(), Type::I64);
@@ -111,10 +110,9 @@ TEST(GraphBuilder, Fib) {
   }
 
   // bb1
-  auto builder1 = InstrBulder{bb1};
-  auto v3 = builder1.create<PhiInstr>(Type::create<Type::I32>());
-  auto v4 = builder1.create<CmpInstr>(v3, v0, Opcode::LE);
-  auto if_ = builder1.create<IfInstr>(v4, bb2, bb3);
+  auto v3 = bb1->create<PhiInstr>(Type::create<Type::I32>());
+  auto v4 = bb1->create<CmpInstr>(v3, v0, Opcode::LE);
+  auto if_ = bb1->create<IfInstr>(v4, bb2, bb3);
 
   {
     ASSERT_EQ(v3->getPrev(), nullptr);
@@ -130,9 +128,8 @@ TEST(GraphBuilder, Fib) {
   }
 
   // bb2
-  auto builder2 = InstrBulder{bb2};
-  auto v5 = builder2.create<PhiInstr>(Type::create<Type::I64>());
-  auto ret = builder2.create<RetInstr>(v5);
+  auto v5 = bb2->create<PhiInstr>(Type::create<Type::I64>());
+  auto ret = bb2->create<RetInstr>(v5);
 
   {
     ASSERT_EQ(v5->getNext(), ret);
@@ -142,14 +139,13 @@ TEST(GraphBuilder, Fib) {
   }
 
   // bb3
-  auto builder3 = InstrBulder{bb3};
-  auto v6 = builder3.create<PhiInstr>(Type::create<Type::I32>());
-  auto c = builder3.create<ConstI32>(1);
-  auto v7 = builder3.create<BinaryOp>(v6, c, Opcode::ADD);
-  auto v8 = builder3.create<CastInstr>(v7, Type::I64);
-  auto v9 = builder3.create<PhiInstr>(Type::create<Type::I64>());
-  auto v10 = builder3.create<BinaryOp>(v8, v9, Opcode::MUL);
-  builder3.create<GotoInstr>(bb1);
+  auto v6 = bb3->create<PhiInstr>(Type::create<Type::I32>());
+  auto c = bb3->create<ConstI32>(1);
+  auto v7 = bb3->create<BinaryOp>(v6, c, Opcode::ADD);
+  auto v8 = bb3->create<CastInstr>(v7, Type::I64);
+  auto v9 = bb3->create<PhiInstr>(Type::create<Type::I64>());
+  auto v10 = bb3->create<BinaryOp>(v8, v9, Opcode::MUL);
+  bb3->create<GotoInstr>(bb1);
 
   {
     ASSERT_EQ(v6->getType(), Type::I32);

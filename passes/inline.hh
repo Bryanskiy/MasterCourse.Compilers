@@ -13,9 +13,8 @@ private:
 
   BasicBlock *splitCallerBlock(Instruction *instr);
   void updateInputsDataFlow(Instruction *instr);
-  void updateOutputsDataFlow(Instruction *instr);
-  void processSingleRet();
-  void processMultipleRets();
+  void updateOutputsDataFlow(BasicBlock *splitted, Instruction *instr);
+  void mergeGraphs(Instruction *instr);
 
 private:
   Function *m_caller{nullptr};

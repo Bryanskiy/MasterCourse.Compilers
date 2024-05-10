@@ -43,7 +43,8 @@ void Inline::inlineCall(Instruction *instr) {
 
   auto splitBB = splitCallerBlock(instr);
   updateInputsDataFlow(instr);
-  updateOutputsDataFlow(instr);
+  updateOutputsDataFlow(splitBB, instr);
+  mergeGraphs(instr);
 }
 
 BasicBlock *Inline::splitCallerBlock(Instruction *instr) {
@@ -51,20 +52,19 @@ BasicBlock *Inline::splitCallerBlock(Instruction *instr) {
 
   auto *currBB = instr->getParent();
   auto *newBB = m_caller->create<BasicBlock>();
-  auto builder = InstrBulder(newBB);
 
   auto *i = instr->next();
   while (i) {
     auto *next = i->next();
     currBB->removeInstr(i);
-    builder.insert(i);
+    newBB->insert(i);
     i = next;
   }
 
   return newBB;
 }
 
-void Inline::updateOutputsDataFlow(Instruction *instr) {
+void Inline::updateOutputsDataFlow(BasicBlock *splitted, Instruction *instr) {
   auto *callInstr = static_cast<CallInstr *>(instr);
   auto *callee = callInstr->getCallee();
 
@@ -73,7 +73,20 @@ void Inline::updateOutputsDataFlow(Instruction *instr) {
 
   auto rets = std::move(retsCollector.rets);
   if (rets.size() == 1) {
+    auto *retInstr = rets[0];
+    replaceUsers(callInstr, retInstr);
   } else {
+    auto *phi = splitted->create<PhiInstr>(callInstr->getType());
+    for (auto *retInstr : rets) {
+      retInstr->addUser(phi);
+      phi->addOption(retInstr, retInstr->getParent());
+    }
+
+    replaceUsers(callInstr, phi);
+  }
+
+  for (auto *retInstr : rets) {
+    retInstr->getParent()->remove(retInstr);
   }
 }
 
@@ -88,8 +101,18 @@ void Inline::updateInputsDataFlow(Instruction *instr) {
   for (auto arg = callInstr->argsBegin(); arg != callInstr->argsEnd();
        ++arg, ++argCount) {
     auto *param = params[argCount];
-    InstrBulder(instr->getParent()).replaceUsers(param, *arg);
-    InstrBulder(fstBB).remove(param);
+    replaceUsers(param, *arg);
+    fstBB->remove(param);
+  }
+}
+
+void Inline::mergeGraphs(Instruction *instr) {
+  auto *callInstr = static_cast<CallInstr *>(instr);
+  auto *callee = callInstr->getCallee();
+
+  auto bbs = callee->getBasicBlocks().nodes();
+  for (auto bbIt = bbs.begin(); bbIt != bbs.end(); ++bbIt) {
+    m_caller->create<BasicBlock>(*bbIt);
   }
 }
 

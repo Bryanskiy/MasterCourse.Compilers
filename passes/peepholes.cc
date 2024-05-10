@@ -29,16 +29,16 @@ void PeepHoles::visitInstr(Instruction *instr) {
 void PeepHoles::processAnd(Instruction *instr) {
   assert(instr->getOpcode() == Opcode::AND);
 
-  auto builder = InstrBulder(instr->getParent());
-  builder.setInsertPoint(instr);
+  auto *bb = instr->getParent();
+  bb->setInsertPoint(instr);
 
   auto *lhs = instr->input(0);
   auto *rhs = instr->input(1);
 
   // And x, x -> x
   if (lhs->getId() == rhs->getId()) {
-    builder.replaceUsers(instr, lhs);
-    builder.remove(instr);
+    replaceUsers(instr, lhs);
+    bb->remove(instr);
     return;
   }
   if (lhs->getOpcode() != Opcode::CONST && rhs->getOpcode() != Opcode::CONST) {
@@ -49,17 +49,17 @@ void PeepHoles::processAnd(Instruction *instr) {
   auto constant = loadIntegerConst(constInstr);
   if (constant.has_value() && constant.value() == 0) {
     auto newConstInstr = createIntegerConstant(0, constInstr->getType());
-    builder.insert(newConstInstr.get());
-    builder.replaceUsers(instr, newConstInstr.release());
-    builder.remove(instr);
+    bb->insert(newConstInstr.get());
+    replaceUsers(instr, newConstInstr.release());
+    bb->remove(instr);
   }
 }
 
 void PeepHoles::processAdd(Instruction *instr) {
   assert(instr->getOpcode() == Opcode::ADD);
 
-  auto builder = InstrBulder(instr->getParent());
-  builder.setInsertPoint(instr);
+  auto *bb = instr->getParent();
+  bb->setInsertPoint(instr);
 
   auto *lhs = instr->input(0);
   auto *rhs = instr->input(1);
@@ -67,11 +67,10 @@ void PeepHoles::processAdd(Instruction *instr) {
   // add V1, V1 -> shl V1, 1
   if (lhs->getId() == rhs->getId()) {
     auto constInstr = createIntegerConstant(1, lhs->getType());
-    builder.insert(constInstr.get());
-    auto *shl =
-        builder.create<BinaryOp>(lhs, constInstr.release(), Opcode::SHL);
-    builder.replaceUsers(instr, shl);
-    builder.remove(instr);
+    bb->insert(constInstr.get());
+    auto *shl = bb->create<BinaryOp>(lhs, constInstr.release(), Opcode::SHL);
+    replaceUsers(instr, shl);
+    bb->remove(instr);
     return;
   }
 
@@ -84,16 +83,16 @@ void PeepHoles::processAdd(Instruction *instr) {
   // Add x, 0 -> x
   auto constant = loadIntegerConst(rhs);
   if (constant.has_value() && constant.value() == 0) {
-    builder.replaceUsers(instr, lhs);
-    builder.remove(instr);
+    replaceUsers(instr, lhs);
+    bb->remove(instr);
   }
 }
 
 void PeepHoles::processAshr(Instruction *instr) {
   assert(instr->getOpcode() == Opcode::ASHR);
 
-  auto builder = InstrBulder(instr->getParent());
-  builder.setInsertPoint(instr);
+  auto *bb = instr->getParent();
+  bb->setInsertPoint(instr);
 
   auto *lhs = instr->input(0);
   auto *rhs = instr->input(1);
@@ -105,8 +104,8 @@ void PeepHoles::processAshr(Instruction *instr) {
     auto prevSh = prevInstr->input(1);
     auto prevInput = prevInstr->input(0);
     if (prevInstr->getId() == lhs->getId() && rhs->getId() == prevSh->getId()) {
-      builder.replaceUsers(instr, prevInput);
-      builder.remove(instr);
+      replaceUsers(instr, prevInput);
+      bb->remove(instr);
     }
   }
 
@@ -119,8 +118,8 @@ void PeepHoles::processAshr(Instruction *instr) {
   }
   auto constant = loadIntegerConst(rhs);
   if (constant.has_value() && constant.value() == 0) {
-    builder.replaceUsers(instr, lhs);
-    builder.remove(instr);
+    replaceUsers(instr, lhs);
+    bb->remove(instr);
   }
 }
 

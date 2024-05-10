@@ -47,29 +47,25 @@ TEST(Liveness, Main) {
   }
 
   // bb 0
-  auto builder = InstrBulder{bbs[0]};
-  auto v0 = builder.create<ConstI32>(1, "v0");
-  auto v1 = builder.create<ConstI32>(10, "v1");
-  auto v2 = builder.create<ConstI32>(20, "v2");
-  builder.create<GotoInstr>(bbs[1], "goto1");
+  auto v0 = bbs[0]->create<ConstI32>(1, "v0");
+  auto v1 = bbs[0]->create<ConstI32>(10, "v1");
+  auto v2 = bbs[0]->create<ConstI32>(20, "v2");
+  bbs[0]->create<GotoInstr>(bbs[1], "goto1");
 
   // bb 1
-  builder = InstrBulder{bbs[1]};
-  auto v3 = builder.create<PhiInstr>(Type::create<Type::I32>(), "v3");
-  auto v4 = builder.create<PhiInstr>(Type::create<Type::I32>(), "v4");
-  auto v5 = builder.create<CmpInstr>(v4, v0, Opcode::EQ, "v5");
-  builder.create<IfInstr>(v5, bbs[3], bbs[2], "if1");
+  auto v3 = bbs[1]->create<PhiInstr>(Type::create<Type::I32>(), "v3");
+  auto v4 = bbs[1]->create<PhiInstr>(Type::create<Type::I32>(), "v4");
+  auto v5 = bbs[1]->create<CmpInstr>(v4, v0, Opcode::EQ, "v5");
+  bbs[1]->create<IfInstr>(v5, bbs[3], bbs[2], "if1");
 
   // bb 2
-  builder = InstrBulder{bbs[2]};
-  auto v7 = builder.create<BinaryOp>(v3, v4, Opcode::MUL, "v7");
-  auto v8 = builder.create<BinaryOp>(v4, v0, Opcode::SUB, "v8");
-  builder.create<GotoInstr>(bbs[1], "goto2");
+  auto v7 = bbs[2]->create<BinaryOp>(v3, v4, Opcode::MUL, "v7");
+  auto v8 = bbs[2]->create<BinaryOp>(v4, v0, Opcode::SUB, "v8");
+  bbs[2]->create<GotoInstr>(bbs[1], "goto2");
 
   // bb3
-  builder = InstrBulder{bbs[3]};
-  auto v9 = builder.create<BinaryOp>(v2, v3, Opcode::ADD, "v9");
-  builder.create<RetInstr>(v9, "ret1");
+  auto v9 = bbs[3]->create<BinaryOp>(v2, v3, Opcode::ADD, "v9");
+  bbs[3]->create<RetInstr>(v9, "ret1");
 
   v3->addOption(v0, bbs[0]);
   v3->addOption(v7, bbs[2]);

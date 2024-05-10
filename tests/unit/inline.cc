@@ -27,18 +27,16 @@ Function createCallerGraph(Function *callee) {
   auto bb0 = function.create<BasicBlock>();
   auto bb1 = function.create<BasicBlock>();
 
-  auto builder = InstrBulder{bb0};
-  auto v0 = builder.create<ConstI64>(1, "v0");
-  auto v1 = builder.create<ConstI64>(5, "v1");
-  builder.create<GotoInstr>(bb1);
+  auto v0 = bb0->create<ConstI64>(1, "v0");
+  auto v1 = bb0->create<ConstI64>(5, "v1");
+  bb0->create<GotoInstr>(bb1);
 
-  builder = InstrBulder{bb1};
-  auto v2 = builder.create<BinaryOp>(v0, v1, Opcode::ADD, "v2");
-  auto v3 = builder.create<CallInstr>(callee, Type::create<Type::I64>(), "v3");
+  auto v2 = bb1->create<BinaryOp>(v0, v1, Opcode::ADD, "v2");
+  auto v3 = bb1->create<CallInstr>(callee, Type::create<Type::I64>(), "v3");
   v3->addArg(v2);
   v3->addArg(v0);
-  auto v4 = builder.create<BinaryOp>(v3, v0, Opcode::SUB, "v4");
-  builder.create<RetInstr>(v4);
+  auto v4 = bb1->create<BinaryOp>(v3, v0, Opcode::SUB, "v4");
+  bb1->create<RetInstr>(v4);
 
   return function;
 }
@@ -72,23 +70,23 @@ Function createCalleeGraph() {
   auto bb2 = function.create<BasicBlock>();
   auto bb3 = function.create<BasicBlock>();
 
-  auto builder = InstrBulder{bb0};
-  auto v0 = builder.create<ParamInstr>(Type::create<Type::I64>());
-  auto v1 = builder.create<ParamInstr>(Type::create<Type::I64>());
-  auto v2 = builder.create<ConstI64>(1);
-  builder.create<GotoInstr>(bb1);
+  // bb 0
+  auto v0 = bb0->create<ParamInstr>(Type::create<Type::I64>());
+  auto v1 = bb0->create<ParamInstr>(Type::create<Type::I64>());
+  auto v2 = bb0->create<ConstI64>(1);
+  bb0->create<GotoInstr>(bb1);
 
-  builder = InstrBulder{bb1};
-  auto v3 = builder.create<BinaryOp>(v0, v1, Opcode::EQ);
-  auto if_ = builder.create<IfInstr>(v3, bb2, bb3);
+  // bb 1
+  auto v3 = bb1->create<BinaryOp>(v0, v1, Opcode::EQ);
+  auto if_ = bb1->create<IfInstr>(v3, bb2, bb3);
 
-  builder = InstrBulder{bb2};
-  auto v4 = builder.create<BinaryOp>(v0, v1, Opcode::ADD);
-  builder.create<RetInstr>(v4);
+  // bb 2
+  auto v4 = bb2->create<BinaryOp>(v0, v1, Opcode::ADD);
+  bb2->create<RetInstr>(v4);
 
-  builder = InstrBulder{bb3};
-  auto v5 = builder.create<BinaryOp>(v1, v2, Opcode::SUB);
-  builder.create<RetInstr>(v5);
+  // bb3
+  auto v5 = bb3->create<BinaryOp>(v1, v2, Opcode::SUB);
+  bb3->create<RetInstr>(v5);
 
   return function;
 }

@@ -65,6 +65,7 @@ public:
   using iterator = IListIterator<BasicBlock>;
 
   template <typename T, typename... Args> T *create(Args &&...args);
+  void insert(BasicBlock *bb);
 
   auto getBasicBlocks() { return BasicBlocksGraph(m_bbs.borrow()); }
   void dump(std::ostream &stream) {
@@ -83,19 +84,15 @@ template <typename T, typename... Args> T *Function::create(Args &&...args) {
   assert(0);
 }
 
+template <> inline BasicBlock *Function::create<BasicBlock>(BasicBlock &bb) {
+  auto *copy = new BasicBlock{bb};
+  insert(copy);
+  return copy;
+}
+
 template <> inline BasicBlock *Function::create<BasicBlock>() {
   auto *bb = new BasicBlock{};
-  std::size_t id = 0;
-  if (!m_bbs.empty()) {
-    id = m_bbs.getLast()->getId() + 1;
-  }
-  bb->setId(id);
-
-  std::stringstream name;
-  name << "bb" << id;
-  bb->setName(name.str());
-
-  m_bbs.push_back(bb);
+  insert(bb);
   return bb;
 }
 

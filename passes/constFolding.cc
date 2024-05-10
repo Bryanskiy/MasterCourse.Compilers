@@ -6,11 +6,12 @@
 
 #define EVALUATE_BINARY_OP(lhsInstr, rhsInstr, type, op)                       \
   {                                                                            \
+    auto *bb = lhsInstr->getParent();                                          \
     auto lhsVal = static_cast<Constant<type> *>(lhsInstr)->getValue();         \
     auto rhsVal = static_cast<Constant<type> *>(rhsInstr)->getValue();         \
     auto res = op()(lhsVal, rhsVal);                                           \
     auto *constInstr = new Constant<type>(res);                                \
-    builder.replace(instr, constInstr);                                        \
+    bb->replace(instr, constInstr);                                            \
   }
 
 #define EVALUATE_BINARY_OP_FOR_EACH_TYPE(lhsInstr, rhsInstr, tag, op)          \
@@ -39,7 +40,6 @@
 #define FOLD_BINARY_OP(instr, op)                                              \
   {                                                                            \
     auto *bb = instr->getParent();                                             \
-    auto builder = InstrBulder(bb);                                            \
     auto type = instr->getType();                                              \
                                                                                \
     auto lhs = instr->input(0);                                                \
@@ -51,10 +51,12 @@
 
 #define EVALUATE_UNARY_OP(instr, type, op)                                     \
   {                                                                            \
+                                                                               \
+    auto *bb = instr->getParent();                                             \
     auto val = static_cast<Constant<type> *>(instr)->getValue();               \
     auto res = op<type>()(val);                                                \
     auto *constInstr = new Constant<type>(res);                                \
-    builder.replace(instr, constInstr);                                        \
+    bb->replace(instr, constInstr);                                            \
   }
 
 #define EVALUATE_UNARY_OP_FOR_EACH_TYPE(instr, tag, op)                        \
@@ -79,10 +81,7 @@
 
 #define FOLD_UNARY_OP(instr, op)                                               \
   {                                                                            \
-    auto *bb = instr->getParent();                                             \
-    auto builder = InstrBulder(bb);                                            \
     auto type = instr->getType();                                              \
-                                                                               \
     auto input = instr->input(0);                                              \
     EVALUATE_UNARY_OP_FOR_EACH_TYPE(input, type, op);                          \
   }

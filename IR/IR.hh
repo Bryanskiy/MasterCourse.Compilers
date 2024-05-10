@@ -69,7 +69,6 @@ protected:
   std::string m_name;
 };
 
-class InstrBulder;
 class Instruction;
 class PhiInstr;
 
@@ -89,6 +88,7 @@ template <typename IT> Range(IT begin, IT end) -> Range<IT>;
 class BasicBlock final : public Value, public IListNode {
 public:
   BasicBlock() = default;
+  using iterator = IListIterator<Instruction>;
 
   auto successors() { return Range(m_succs.begin(), m_succs.end()); }
   auto predecessors() { return Range(m_preds.begin(), m_preds.end()); }
@@ -135,6 +135,16 @@ public:
 
   std::vector<Instruction *> collectParams() const;
 
+  void setInsertPoint(Instruction *inserter) {
+    m_inserter = iterator(inserter);
+  }
+  void replace(Instruction *oldInst, Instruction *newInst);
+  void forget(Instruction *instr);
+  void remove(Instruction *instr);
+
+  template <typename T, typename... Args> T *create(Args &&...args);
+  void insert(Instruction *instr);
+
 private:
   void addPredecessor(BasicBlock *pred) { m_preds.push_back(pred); }
   void removePredecessor(BasicBlock *bb) {
@@ -144,14 +154,13 @@ private:
   }
 
 private:
-  friend InstrBulder;
-
   IList<Instruction> m_instrs;
   std::vector<BasicBlock *> m_preds;
   std::vector<BasicBlock *> m_succs;
   std::vector<PhiInstr *> m_phis;
   Function *m_function{nullptr};
 
+  iterator m_inserter{nullptr};
   std::size_t m_id{0};
   std::size_t m_iid{0}; // counter for instr id
 };
@@ -200,8 +209,6 @@ public:
   }
 
   void dumpRef(std::ostream &stream) { stream << this->getName(); }
-  friend InstrBulder;
-
   bool isTerm() const {
     return m_op == Opcode::GOTO || m_op == Opcode::IF || m_op == Opcode::RET;
   }
@@ -212,35 +219,10 @@ protected:
   std::vector<Instruction *> m_users;
 
 private:
+  friend BasicBlock;
+
   BasicBlock *m_bb{nullptr};
   std::size_t m_id;
-};
-
-class InstrBulder final {
-public:
-  using iterator = IListIterator<Instruction>;
-
-  InstrBulder(BasicBlock *bb) : m_bb{bb} { m_inserter = m_bb->m_instrs.end(); }
-
-  void setInsertPoint(Instruction *inserter) {
-    m_inserter = iterator(inserter);
-  }
-  void replace(Instruction *oldInst, Instruction *newInst);
-  void forget(Instruction *instr);
-  void replaceInput(Instruction *who, Instruction *oldInstr,
-                    Instruction *newInstr) {
-    std::replace(who->m_inputs.begin(), who->m_inputs.end(), oldInstr,
-                 newInstr);
-  }
-  void replaceUsers(Instruction *oldInst, Instruction *newInst);
-  void remove(Instruction *instr);
-
-  template <typename T, typename... Args> T *create(Args &&...args);
-  void insert(Instruction *instr);
-
-private:
-  BasicBlock *m_bb{nullptr};
-  iterator m_inserter{nullptr};
 };
 
 class ParamInstr : public Instruction {
@@ -290,8 +272,6 @@ public:
   void setTrueBB(BasicBlock *bb) { m_true_bb = bb; }
 
 private:
-  friend InstrBulder;
-
   BasicBlock *m_false_bb{nullptr};
   BasicBlock *m_true_bb{nullptr};
 };
@@ -313,7 +293,6 @@ public:
   }
 
 private:
-  friend InstrBulder;
   BasicBlock *m_bb{nullptr};
 };
 
@@ -321,6 +300,7 @@ class RetInstr final : public Instruction {
 public:
   RetInstr() { m_op = Opcode::RET; }
   RetInstr(Instruction *v) : RetInstr() {
+    m_type = v->getType();
     m_inputs.push_back(v);
     v->addUser(this);
   }
@@ -554,25 +534,26 @@ CONSTANT(std::int16_t, I16);
 CONSTANT(std::int8_t, I8);
 CONSTANT(bool, I1);
 
-template <typename T, typename... Args> T *InstrBulder::create(Args &&...args) {
+template <typename T, typename... Args> T *BasicBlock::create(Args &&...args) {
   auto *elem = new T(args...);
-  elem->setParent(m_bb);
-  elem->setId(m_bb->m_iid);
-  ++m_bb->m_iid;
+  elem->setParent(this);
+  elem->setId(m_iid);
+  ++m_iid;
 
-  m_bb->m_instrs.insertBefore(m_inserter, elem);
+  m_instrs.insertBefore(m_inserter, elem);
   if constexpr (std::is_same_v<T, IfInstr>) {
-    m_bb->addSuccessor(elem->getFalseBB());
-    m_bb->addSuccessor(elem->getTrueBB());
+    addSuccessor(elem->getFalseBB());
+    addSuccessor(elem->getTrueBB());
   } else if constexpr (std::is_same_v<T, GotoInstr>) {
-    m_bb->addSuccessor(elem->getBB());
+    addSuccessor(elem->getBB());
   } else if constexpr (std::is_same_v<T, PhiInstr>) {
-    m_bb->addPhi(elem);
+    addPhi(elem);
   }
 
   return elem;
 }
 
+void replaceUsers(Instruction *oldInst, Instruction *newInst);
 std::optional<std::int64_t> loadIntegerConst(Instruction *instr);
 std::unique_ptr<Instruction> createIntegerConstant(std::int64_t val, Type type);
 

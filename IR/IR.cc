@@ -7,32 +7,32 @@
 
 namespace jade {
 
-void InstrBulder::insert(Instruction *instr) {
-  instr->setParent(m_bb);
-  instr->setId(m_bb->m_iid);
-  ++m_bb->m_iid;
-  m_bb->m_instrs.insertBefore(m_inserter, instr);
+void BasicBlock::insert(Instruction *instr) {
+  instr->setParent(this);
+  instr->setId(m_iid);
+  ++m_iid;
+  m_instrs.insertBefore(m_inserter, instr);
 }
 
-void InstrBulder::replaceUsers(Instruction *oldInst, Instruction *newInst) {
+void replaceUsers(Instruction *oldInst, Instruction *newInst) {
   std::for_each(oldInst->usersBegin(), oldInst->usersEnd(),
-                [this, oldInst, newInst](Instruction *user) {
+                [oldInst, newInst](Instruction *user) {
                   newInst->addUser(user);
-                  replaceInput(user, oldInst, newInst);
+                  user->replaceInput(oldInst, newInst);
                 });
 }
 
-void InstrBulder::replace(Instruction *oldInst, Instruction *newInst) {
+void BasicBlock::replace(Instruction *oldInst, Instruction *newInst) {
   auto bb = oldInst->getParent();
-  m_bb->m_instrs.insertBefore(iterator{oldInst}, newInst);
+  m_instrs.insertBefore(iterator{oldInst}, newInst);
 
   forget(oldInst);
   replaceUsers(oldInst, newInst);
 
-  m_bb->m_instrs.remove(oldInst);
+  m_instrs.remove(oldInst);
 }
 
-void InstrBulder::forget(Instruction *instr) {
+void BasicBlock::forget(Instruction *instr) {
   std::for_each(instr->begin(), instr->end(), [instr](Instruction *input) {
     auto useOld =
         std::find(input->m_users.begin(), input->m_users.end(), instr);
@@ -40,12 +40,12 @@ void InstrBulder::forget(Instruction *instr) {
   });
 }
 
-void InstrBulder::remove(Instruction *instr) {
+void BasicBlock::remove(Instruction *instr) {
   forget(instr);
   std::for_each(
       instr->usersBegin(), instr->usersEnd(),
-      [this, instr](Instruction *user) { replaceInput(user, instr, nullptr); });
-  m_bb->m_instrs.remove(instr);
+      [this, instr](Instruction *user) { user->replaceInput(instr, nullptr); });
+  m_instrs.remove(instr);
 }
 
 void BasicBlock::dump(std::ostream &stream) {

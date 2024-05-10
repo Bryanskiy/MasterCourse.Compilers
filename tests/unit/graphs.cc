@@ -13,21 +13,11 @@ Function example1() {
     bbs[i] = function.create<BasicBlock>();
   }
   // TODO: more instrs
-  auto builder = InstrBulder(bbs[0]);
-  auto v0 = builder.create<ParamInstr>(Type::create<Type::I32>());
-  { builder.create<GotoInstr>(bbs[1]); }
-  {
-    builder = InstrBulder(bbs[1]);
-    builder.create<IfInstr>(v0, bbs[2], bbs[3]);
-  }
-  {
-    builder = InstrBulder(bbs[3]);
-    builder.create<GotoInstr>(bbs[1]);
-  }
-  {
-    builder = InstrBulder(bbs[2]);
-    builder.create<RetInstr>();
-  }
+  auto v0 = bbs[0]->create<ParamInstr>(Type::create<Type::I32>());
+  bbs[0]->create<GotoInstr>(bbs[1]);
+  bbs[1]->create<IfInstr>(v0, bbs[2], bbs[3]);
+  bbs[3]->create<GotoInstr>(bbs[1]);
+  bbs[2]->create<RetInstr>();
 
   return function;
 }
@@ -40,45 +30,27 @@ Function example2() {
     bbs[i] = function.create<BasicBlock>();
   }
   // TODO: more instrs
-  auto builder = InstrBulder(bbs[0]);
-  auto v0 = builder.create<ParamInstr>(Type::create<Type::I32>());
-  {
-    builder.create<GotoInstr>(bbs[1]);
-    bbs[0]->addSuccessor(bbs[1]);
-  }
+  auto v0 = bbs[0]->create<ParamInstr>(Type::create<Type::I32>());
+  bbs[0]->create<GotoInstr>(bbs[1]);
+  bbs[0]->addSuccessor(bbs[1]);
 
-  {
-    builder = InstrBulder(bbs[1]);
-    builder.create<IfInstr>(v0, bbs[2], bbs[4]);
-    bbs[1]->addSuccessor(bbs[2]);
-    bbs[1]->addSuccessor(bbs[4]);
-  }
-  {
-    builder = InstrBulder(bbs[2]);
-    builder.create<GotoInstr>(bbs[5]);
-    bbs[2]->addSuccessor(bbs[5]);
-  }
-  {
-    builder = InstrBulder(bbs[3]);
-    builder.create<GotoInstr>(bbs[5]);
-    bbs[3]->addSuccessor(bbs[5]);
-  }
-  {
-    builder = InstrBulder(bbs[4]);
-    builder.create<IfInstr>(v0, bbs[3], bbs[6]);
-    bbs[4]->addSuccessor(bbs[3]);
-    bbs[4]->addSuccessor(bbs[6]);
-  }
+  bbs[1]->create<IfInstr>(v0, bbs[2], bbs[4]);
+  bbs[1]->addSuccessor(bbs[2]);
+  bbs[1]->addSuccessor(bbs[4]);
 
-  {
-    builder = InstrBulder(bbs[6]);
-    builder.create<GotoInstr>(bbs[5]);
-    bbs[6]->addSuccessor(bbs[5]);
-  }
-  {
-    builder = InstrBulder(bbs[5]);
-    builder.create<RetInstr>();
-  }
+  bbs[2]->create<GotoInstr>(bbs[5]);
+  bbs[2]->addSuccessor(bbs[5]);
+
+  bbs[3]->create<GotoInstr>(bbs[5]);
+  bbs[3]->addSuccessor(bbs[5]);
+  bbs[4]->create<IfInstr>(v0, bbs[3], bbs[6]);
+
+  bbs[4]->addSuccessor(bbs[3]);
+  bbs[4]->addSuccessor(bbs[6]);
+
+  bbs[6]->create<GotoInstr>(bbs[5]);
+  bbs[6]->addSuccessor(bbs[5]);
+  bbs[5]->create<RetInstr>();
 
   return function;
 }
