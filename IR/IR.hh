@@ -193,12 +193,14 @@ public:
   auto begin() { return m_inputs.begin(); }
   auto end() { return m_inputs.end(); }
   Instruction *next() { return static_cast<Instruction *>(this->getNext()); }
+  Instruction *prev() { return static_cast<Instruction *>(this->getPrev()); }
 
   void replaceInput(Instruction *oldInstr, Instruction *newInstr) {
     std::replace(m_inputs.begin(), m_inputs.end(), oldInstr, newInstr);
   }
 
   void addUser(Instruction *instr) { m_users.push_back(instr); }
+  auto users() const { return m_users; }
   void removeUser(Instruction *instr) {
     auto pos = std::find(m_users.begin(), m_users.end(), instr);
     m_users.erase(pos);

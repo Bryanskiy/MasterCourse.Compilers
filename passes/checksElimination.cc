@@ -33,7 +33,7 @@ void CheckElimination::zeroCheckElimination(Instruction *instr) {
     if ((*user)->getOpcode() == Opcode::ZeroCheck && *user != instr &&
         dominate(m_domTree, *user, instr)) {
       input->removeUser(instr);
-      bb->remove(instr);
+      bb->removeInstr(instr);
     }
   }
 }
@@ -47,7 +47,7 @@ void CheckElimination::boundsCheckElimination(Instruction *instr) {
       auto *secondBound = (*user)->input(1);
       if (secondBound == bound && dominate(m_domTree, *user, instr)) {
         input->removeUser(instr);
-        bb->remove(instr);
+        bb->removeInstr(instr);
       }
     }
   }

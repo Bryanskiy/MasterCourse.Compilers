@@ -7,7 +7,7 @@ add_library(
     checksElimination.cc
 )
 
-target_link_libraries(passes IR)
+target_link_libraries(passes IR analysis)
 target_include_directories(passes
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${PROJECT_SOURCE_DIR}/DSA
