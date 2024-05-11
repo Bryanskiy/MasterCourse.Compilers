@@ -4,21 +4,21 @@
 
 namespace jade {
 
-void CheckElimination::run(Function *fn) {
+void ChecksElimination::run(Function *fn) {
   auto graph = fn->getBasicBlocks();
   auto builder = DominatorTreeBuilder<BasicBlocksGraph>();
   m_domTree = builder.build(graph);
   visitFn(fn);
 }
 
-void CheckElimination::visitInstr(Instruction *instr) {
+void ChecksElimination::visitInstr(Instruction *instr) {
   switch (instr->getOpcode()) {
   case Opcode::BoundsCheck: {
-    boundsCheckElimination(instr);
+    boundsChecksElimination(instr);
     break;
   }
   case Opcode::ZeroCheck: {
-    zeroCheckElimination(instr);
+    zeroChecksElimination(instr);
     break;
   }
   default:
@@ -26,7 +26,7 @@ void CheckElimination::visitInstr(Instruction *instr) {
   }
 }
 
-void CheckElimination::zeroCheckElimination(Instruction *instr) {
+void ChecksElimination::zeroChecksElimination(Instruction *instr) {
   auto *input = instr->input(0);
   auto *bb = instr->getParent();
   for (auto user = input->usersBegin(); user != input->usersEnd(); ++user) {
@@ -37,7 +37,7 @@ void CheckElimination::zeroCheckElimination(Instruction *instr) {
     }
   }
 }
-void CheckElimination::boundsCheckElimination(Instruction *instr) {
+void ChecksElimination::boundsChecksElimination(Instruction *instr) {
   auto *input = instr->input(0);
   auto *bound = instr->input(1);
   auto *bb = instr->getParent();

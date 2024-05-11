@@ -6,14 +6,14 @@
 #include "function.hh"
 namespace jade {
 
-struct CheckElimination final : Pass, Visitor {
+struct ChecksElimination final : Pass, Visitor {
   void visitInstr(Instruction *instr) override;
   void run(Function *fn) override;
 
 private:
   DomTree<BasicBlocksGraph> m_domTree;
-  void zeroCheckElimination(Instruction *instr);
-  void boundsCheckElimination(Instruction *instr);
+  void zeroChecksElimination(Instruction *instr);
+  void boundsChecksElimination(Instruction *instr);
 };
 
 } // namespace jade
