@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "IR.hh"
+#include "function.hh"
 #include "graph.hh"
 
 namespace jade {
@@ -273,5 +275,8 @@ template <typename GraphTy> void DominatorTreeBuilder<GraphTy>::computeIdoms() {
     ++id;
   }
 }
+
+bool dominate(DomTree<BasicBlocksGraph> &domTree, Instruction *lhs,
+              Instruction *rhs);
 
 } // namespace jade

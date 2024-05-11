@@ -72,7 +72,6 @@ BasicBlock *Inline::splitCallerBlock(Instruction *instr) {
 
   auto *i = instr->next();
   moveInstrs(i, currBB, newBB);
-  currBB->addSuccessor(newBB);
 
   return newBB;
 }

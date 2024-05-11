@@ -1,6 +1,7 @@
 add_library(
     analysis
     liveness.cc
+    domTree.cc
 )
 
 target_include_directories(analysis
