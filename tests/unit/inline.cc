@@ -101,7 +101,7 @@ TEST(Inline, test1) {
   pm.registerPass(std::make_unique<Inline>());
   pm.run();
 
-  caller.dump(std::cout);
+  // caller.dump(std::cout);
 
   auto bbGraph = caller.getBasicBlocks().nodes();
 
@@ -163,10 +163,10 @@ TEST(Inline, test1) {
   // bb2
   auto *v6 = &*bbs[2]->begin();
   ASSERT_EQ(v6->getOpcode(), Opcode::PHI);
-  ASSERT_EQ(static_cast<PhiInstr *>(v6)->getOption(0).first, bbs[5]);
-  ASSERT_EQ(static_cast<PhiInstr *>(v6)->getOption(0).second, v5);
-  ASSERT_EQ(static_cast<PhiInstr *>(v6)->getOption(1).first, bbs[4]);
-  ASSERT_EQ(static_cast<PhiInstr *>(v6)->getOption(1).second, v4);
+  ASSERT_EQ(static_cast<PhiInstr *>(v6)->getOption(0).first, bbs[4]);
+  ASSERT_EQ(static_cast<PhiInstr *>(v6)->getOption(0).second, v4);
+  ASSERT_EQ(static_cast<PhiInstr *>(v6)->getOption(1).first, bbs[5]);
+  ASSERT_EQ(static_cast<PhiInstr *>(v6)->getOption(1).second, v5);
 
   auto *v7 = v6->next();
   ASSERT_EQ(v7->getOpcode(), Opcode::SUB);
@@ -191,7 +191,7 @@ TEST(Inline, Gcopy) {
   std::unique_ptr<Function> copy;
   {
     Function callee = createCalleeGraph();
-    std::cout << "Original:" << std::endl;
+    // std::cout << "Original:" << std::endl;
     // callee.dump(std::cout);
     copy = callee.copy();
   }

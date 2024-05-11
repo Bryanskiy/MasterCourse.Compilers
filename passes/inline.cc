@@ -20,6 +20,16 @@ struct RetInstrCollector : Visitor {
   }
 };
 
+void moveInstrs(Instruction *start, BasicBlock *src, BasicBlock *dst) {
+  auto *i = start;
+  while (i) {
+    auto *next = i->next();
+    src->removeInstr(i);
+    dst->insert(i);
+    i = next;
+  }
+}
+
 void Inline::run(Function *fn) {
   m_caller = fn;
 
@@ -61,13 +71,7 @@ BasicBlock *Inline::splitCallerBlock(Instruction *instr) {
   auto *newBB = m_caller->create<BasicBlock>();
 
   auto *i = instr->next();
-  while (i) {
-    auto *next = i->next();
-    currBB->removeInstr(i);
-    newBB->insert(i);
-    i = next;
-  }
-
+  moveInstrs(i, currBB, newBB);
   currBB->addSuccessor(newBB);
 
   return newBB;
@@ -98,7 +102,7 @@ void Inline::updateOutputsDataFlow(BasicBlock *splitted, CallInstr *callInstr,
     auto *bb = retInstr->getParent();
     bb->setInsertPoint(retInstr);
     bb->create<GotoInstr>(splitted);
-    // bb->remove(retInstr);
+    bb->remove(retInstr);
   }
 }
 
@@ -118,15 +122,8 @@ void Inline::updateInputsDataFlow(CallInstr *callInstr, Function *callee) {
 void Inline::moveEntryBB(BasicBlock *callBB, CallInstr *callInstr,
                          Function *callee) {
   auto calleeStartBB = &*callee->getBasicBlocks().nodes().begin();
-  auto *calleeStartInstr = &*calleeStartBB->begin();
-  auto *i = &*callee->getBasicBlocks().nodes().begin()->begin();
-  while (i) {
-    auto *next = i->next();
-    calleeStartBB->removeInstr(i);
-    callBB->insert(i);
-    i = next;
-  }
-
+  auto *i = &*calleeStartBB->begin();
+  moveInstrs(i, calleeStartBB, callBB);
   callee->remove(calleeStartBB);
 }
 

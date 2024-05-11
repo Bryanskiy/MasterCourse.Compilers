@@ -45,17 +45,11 @@ std::unique_ptr<Function> Function::copy() const {
   // build new bb edges.
   for (auto bb = ret->m_bbs.begin(); bb != ret->m_bbs.end(); ++bb) {
     for (auto newInstr = bb->begin(); newInstr != bb->end(); ++newInstr) {
-      for (auto user = newInstr->usersBegin(); user != newInstr->usersEnd();
-           ++user) {
-        *user = instrMapping[*user];
-      }
-
       if (newInstr->getOpcode() == Opcode::GOTO) {
         auto *gotoInstr = static_cast<GotoInstr *>(&*newInstr);
         gotoInstr->setBB(bbsMapping[gotoInstr->getBB()]);
 
         gotoInstr->getParent()->addSuccessor(gotoInstr->getBB());
-        continue;
       }
 
       if (newInstr->getOpcode() == Opcode::PHI) {
@@ -66,7 +60,6 @@ std::unique_ptr<Function> Function::copy() const {
         }
 
         phiInstr->getParent()->addPhi(phiInstr);
-        continue;
       }
 
       if (newInstr->getOpcode() == Opcode::IF) {
@@ -80,6 +73,7 @@ std::unique_ptr<Function> Function::copy() const {
 
       for (auto input = newInstr->begin(); input != newInstr->end(); ++input) {
         *input = instrMapping[*input];
+        (*input)->addUser(&*newInstr);
       }
     }
   }
